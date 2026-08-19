@@ -1,6 +1,5 @@
 import NextAuth from 'next-auth';
 import type { NextAuthConfig } from 'next-auth';
-import Google from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
@@ -8,10 +7,6 @@ import { eq } from 'drizzle-orm';
 
 export const authConfig = {
   providers: [
-    Google({
-      clientId: process.env.AUTH_GOOGLE_ID,
-      clientSecret: process.env.AUTH_GOOGLE_SECRET,
-    }),
     CredentialsProvider({
       name: 'Local Development Login',
       credentials: {
