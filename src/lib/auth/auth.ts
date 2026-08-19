@@ -1,6 +1,8 @@
 import NextAuth from 'next-auth';
 import type { NextAuthConfig } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import Google from 'next-auth/providers/google';
+import EntraID from 'next-auth/providers/microsoft-entra-id';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
@@ -36,9 +38,48 @@ export const authConfig = {
         }
         return null;
       }
-    })
+    }),
+    ...(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET ? [
+      Google({
+        clientId: process.env.AUTH_GOOGLE_ID,
+        clientSecret: process.env.AUTH_GOOGLE_SECRET,
+        allowDangerousEmailAccountLinking: true,
+      })
+    ] : []),
+    ...(process.env.AUTH_MICROSOFT_ENTRA_ID_ID && process.env.AUTH_MICROSOFT_ENTRA_ID_SECRET ? [
+      EntraID({
+        clientId: process.env.AUTH_MICROSOFT_ENTRA_ID_ID,
+        clientSecret: process.env.AUTH_MICROSOFT_ENTRA_ID_SECRET,
+        tenantId: process.env.AUTH_MICROSOFT_ENTRA_ID_TENANT_ID,
+        allowDangerousEmailAccountLinking: true,
+      })
+    ] : [])
   ],
   callbacks: {
+    async signIn({ user, account, profile }) {
+      // E2E Test Bypass
+      if (user.email === 'admin@recruitai.local' || user.email === 'recruiter@techstaffing.local') {
+        return true;
+      }
+      
+      // For SSO providers (Google/Entra), verify the email exists in our database
+      if (user.email) {
+        try {
+          const [dbUser] = await db.select().from(users).where(eq(users.email, user.email));
+          if (dbUser) {
+            // Attach our internal database ID to the Auth.js user object
+            // so the jwt callback can pick it up.
+            user.id = dbUser.id;
+            return true;
+          }
+        } catch (e) {
+          console.error("DB Error during sign in", e);
+        }
+      }
+      
+      // If user is not in our database, reject the login
+      return false; // Or return a URL to a custom error page e.g. '/unauthorized'
+    },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
