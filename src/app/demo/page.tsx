@@ -31,6 +31,7 @@ export default function DemoPage() {
   }, []);
 
   const simulateIntake = () => {
+    if (demoState !== 'IDLE') return;
     setDemoState('LOADING');
     setTimeout(() => {
       setDemoState('ANALYZING');
@@ -41,8 +42,8 @@ export default function DemoPage() {
           score: 94
         });
         setDemoState('REVIEW');
-      }, 2500); // AI thinking time
-    }, 1500); // Upload time
+      }, 2500);
+    }, 1500);
   };
 
   return (
@@ -68,7 +69,7 @@ export default function DemoPage() {
         </div>
       </div>
 
-      {/* FAKE SIDEBAR (Mimics original UI exactly) */}
+      {/* FAKE SIDEBAR */}
       <aside className="w-64 bg-white border-r border-slate-200 flex flex-col shadow-sm z-10 transition-colors duration-300 shrink-0">
         <div className="p-5 border-b border-slate-200">
           <h1 className="text-2xl font-black flex items-center gap-2 text-indigo-700 tracking-tight">
@@ -77,38 +78,38 @@ export default function DemoPage() {
           </h1>
         </div>
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          <SidebarLink icon={<LayoutDashboard />} label="Dashboard" active={view === 'MANAGER'} />
-          <SidebarLink icon={<CheckSquare />} label="Approvals" badge={demoState === 'REVIEW' ? "1" : null} />
-          <SidebarLink icon={<UploadCloud />} label="Upload CV" active={view === 'RECRUITER'} />
-          <SidebarLink icon={<Users />} label="Candidates" />
-          <SidebarLink icon={<BarChart />} label="ROI Reports" active={view === 'MANAGER'} />
-          <SidebarLink icon={<Workflow />} label="Workflows" />
+          <SidebarLink icon={<LayoutDashboard />} label="Dashboard" active={view === 'MANAGER'} onClick={() => setView('MANAGER')} />
+          <SidebarLink icon={<CheckSquare />} label="Approvals" badge={demoState === 'REVIEW' ? "1" : null} onClick={() => setView('RECRUITER')} />
+          <SidebarLink icon={<UploadCloud />} label="Upload CV" active={view === 'RECRUITER'} onClick={() => setView('RECRUITER')} />
+          <SidebarLink icon={<Users />} label="Candidates" onClick={() => setView('RECRUITER')} />
+          <SidebarLink icon={<BarChart />} label="ROI Reports" active={view === 'MANAGER'} onClick={() => setView('MANAGER')} />
+          <SidebarLink icon={<Workflow />} label="Workflows" onClick={() => setView('MANAGER')} />
 
           {view === 'MANAGER' && (
-            <>
+            <div className="animate-in fade-in slide-in-from-top-2 duration-300">
               <div className="pt-4 pb-2">
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider px-2.5">Administration</p>
               </div>
-              <SidebarLink icon={<Settings />} label="Settings" />
-              <SidebarLink icon={<Users />} label="Team Monitor" />
-            </>
+              <SidebarLink icon={<Settings />} label="Settings" onClick={() => setView('MANAGER')} />
+              <SidebarLink icon={<Users />} label="Team Monitor" onClick={() => setView('MANAGER')} />
+            </div>
           )}
         </nav>
         
         {/* User Profile & Logout */}
         <div className="p-4 border-t border-slate-200 bg-slate-50">
-          <div className="flex items-center gap-3 px-2 mb-4 hover:bg-slate-200 p-2 -mx-2 rounded-xl cursor-pointer group">
-            <div className={`p-2 rounded-lg ${view === 'MANAGER' ? 'bg-indigo-100 text-indigo-600' : 'bg-emerald-100 text-emerald-600'}`}>
+          <div className="flex items-center gap-3 px-2 mb-4 hover:bg-slate-200 p-2 -mx-2 rounded-xl cursor-pointer group transition-colors">
+            <div className={`p-2 rounded-lg transition-colors duration-300 ${view === 'MANAGER' ? 'bg-indigo-100 text-indigo-600 group-hover:bg-indigo-200' : 'bg-emerald-100 text-emerald-600 group-hover:bg-emerald-200'}`}>
               {view === 'MANAGER' ? <Shield className="w-5 h-5" /> : <UserCircle className="w-5 h-5" />}
             </div>
             <div className="flex flex-col">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">My Profile</span>
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider group-hover:text-slate-500 transition-colors">My Profile</span>
               <span className="text-sm font-bold text-slate-700">
                 {view === 'MANAGER' ? 'Manager (Demo)' : 'Recruiter (Demo)'}
               </span>
             </div>
           </div>
-          <button onClick={() => setDemoState('IDLE')} className="flex w-full justify-center items-center gap-2 p-2.5 bg-white border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 rounded-lg transition-all font-medium shadow-sm text-slate-600">
+          <button onClick={() => { setDemoState('IDLE'); setParsedData(null); }} className="flex w-full justify-center items-center gap-2 p-2.5 bg-white border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 rounded-lg transition-all font-medium shadow-sm text-slate-600">
             <LogOut className="w-4 h-4" />
             Reset Demo
           </button>
@@ -133,8 +134,8 @@ export default function DemoPage() {
 
       {/* Product-Led Growth Cliffhanger Modal */}
       {demoState === 'CLIFFHANGER' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg p-10 text-center transform transition-all animate-in zoom-in-95 duration-500">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg p-10 text-center transform transition-all animate-in zoom-in-95 slide-in-from-bottom-8 duration-500">
             <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <CheckCircle2 className="w-10 h-10 text-green-600" />
             </div>
@@ -143,10 +144,13 @@ export default function DemoPage() {
               In een live omgeving staat deze kandidaat nu perfect ingevuld in jullie ATS (zoals <strong>Bullhorn, Carerix of Recruitee</strong>), inclusief de AI-match score en motivatie. Geen handwerk meer.
             </p>
             <div className="flex flex-col gap-3">
-              <button onClick={() => alert("Hier opent de Calendly of Lead-form!")} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5">
-                Test dit met jullie eigen ATS
+              <button 
+                onClick={() => { window.location.href = "mailto:sales@techuis.nl?subject=RecruitAI Demo Aanvraag"; }} 
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 flex items-center justify-center gap-2"
+              >
+                <Mail className="w-5 h-5" /> Test dit met jullie eigen ATS
               </button>
-              <button onClick={() => setDemoState('IDLE')} className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-4 rounded-xl transition-all">
+              <button onClick={() => { setDemoState('IDLE'); setParsedData(null); }} className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-4 rounded-xl transition-all">
                 Demo Opnieuw Starten
               </button>
             </div>
@@ -157,9 +161,9 @@ export default function DemoPage() {
   );
 }
 
-function SidebarLink({ icon, label, active = false, badge = null }: any) {
+function SidebarLink({ icon, label, active = false, badge = null, onClick }: any) {
   return (
-    <div className={`flex items-center gap-3 p-2.5 rounded-lg font-medium transition-colors cursor-pointer ${active ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-100 text-slate-700'}`}>
+    <div onClick={onClick} className={`flex items-center gap-3 p-2.5 rounded-lg font-medium transition-colors cursor-pointer ${active ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-100 text-slate-700'}`}>
       <div className={`w-5 h-5 ${active ? 'text-indigo-600' : 'text-slate-500'}`}>
         {icon}
       </div>
@@ -187,7 +191,7 @@ function RecruiterView({ demoState, setDemoState, simulateIntake, parsedData }: 
         <div 
           className={`border-2 border-dashed rounded-3xl p-12 text-center transition-all duration-500 relative overflow-hidden
             ${demoState === 'IDLE' ? 'border-indigo-300 bg-indigo-50/50 hover:bg-indigo-50 cursor-pointer shadow-inner' : 'border-slate-200 bg-white opacity-50 pointer-events-none'}`}
-          onClick={demoState === 'IDLE' ? simulateIntake : undefined}
+          onClick={simulateIntake}
         >
           {demoState === 'IDLE' ? (
             <>
@@ -326,6 +330,7 @@ function RecruiterView({ demoState, setDemoState, simulateIntake, parsedData }: 
 
 // --- MANAGER VIEW COMPONENT ---
 function ManagerView() {
+  const [synced, setSynced] = useState(false);
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       
@@ -368,11 +373,13 @@ function ManagerView() {
         <div className="bg-white rounded-3xl p-8 border shadow-sm">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-xl font-bold">Actieve Koppelingen</h3>
-            <span className="text-emerald-600 text-sm font-bold bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full flex items-center gap-2"><CheckCircle2 className="w-4 h-4"/> Gezond</span>
+            <button onClick={() => setSynced(true)} className="text-emerald-600 hover:text-white hover:bg-emerald-600 transition-colors text-sm font-bold bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4"/> {synced ? 'Alles gesynchroniseerd!' : 'Gezond (Klik om te testen)'}
+            </button>
           </div>
           
           <div className="space-y-4">
-            <IntegrationRow name="Bullhorn ATS" status="Actief" syncs="782 syncs" />
+            <IntegrationRow name="Bullhorn ATS" status="Actief" syncs={synced ? "783 syncs" : "782 syncs"} highlight={synced} />
             <IntegrationRow name="Slack Notificaties" status="Actief" syncs="144 alerts" />
             <IntegrationRow name="Microsoft Teams" status="Pauze" syncs="0 syncs" inactive />
           </div>
@@ -412,11 +419,11 @@ function StatCard({ icon, title, value, trend, color }: any) {
   );
 }
 
-function IntegrationRow({ name, status, syncs, inactive = false }: any) {
+function IntegrationRow({ name, status, syncs, inactive = false, highlight = false }: any) {
   return (
-    <div className={`flex items-center justify-between p-4 border rounded-2xl ${inactive ? 'bg-slate-50 opacity-60' : 'bg-white hover:border-indigo-200 transition-colors shadow-sm'}`}>
+    <div className={`flex items-center justify-between p-4 border rounded-2xl transition-all duration-500 ${inactive ? 'bg-slate-50 opacity-60' : 'bg-white hover:border-indigo-200 shadow-sm'} ${highlight ? 'bg-emerald-50 border-emerald-200' : ''}`}>
       <div className="flex items-center gap-3">
-        <Building className="w-8 h-8 text-slate-400" />
+        <Building className={`w-8 h-8 ${highlight ? 'text-emerald-500' : 'text-slate-400'}`} />
         <div>
           <p className="font-bold text-slate-900">{name}</p>
           <p className="text-xs text-slate-500">{syncs}</p>
