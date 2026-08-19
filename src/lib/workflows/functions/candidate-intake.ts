@@ -12,8 +12,11 @@ import { notifyRecruiter, notifyManager, notifyAdminError } from "@/lib/integrat
  * This function is durable - if it fails midway, Inngest will retry from the failed step.
  */
 export const processCandidateIntake = (inngest.createFunction as any)(
-  { id: "process-candidate-intake", name: "Candidate CV Intake Workflow" },
-  { event: "recruitment/candidate.uploaded" },
+  { 
+    id: "process-candidate-intake", 
+    name: "Candidate CV Intake Workflow",
+    event: "recruitment/candidate.uploaded" 
+  },
   async ({ event, step }: any) => {
     try {
       const { tenantId, candidateId, documentUrl } = event.data;
