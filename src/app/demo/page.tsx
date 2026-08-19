@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { 
   Upload, FileText, BrainCircuit, CheckCircle2, XCircle, 
   Building, Briefcase, ChevronRight, BarChart3, Users, 
@@ -10,14 +10,57 @@ import {
 
 type DemoState = 'IDLE' | 'LOADING' | 'ANALYZING' | 'REVIEW' | 'CLIFFHANGER';
 
+// --- CUSTOM DEMO TOOLTIP COMPONENT ---
+function DemoTooltip({ children, text, className = "" }: { children: React.ReactNode, text: string, className?: string }) {
+  const [visible, setVisible] = useState(false);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleMouseEnter = () => {
+    timerRef.current = setTimeout(() => {
+      setVisible(true);
+    }, 5000); // 5 seconds hover
+  };
+
+  const handleMouseLeave = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setVisible(false);
+  };
+
+  const handleMouseMove = () => {
+    // If the mouse moves, hide immediately and restart the 5-second timer.
+    // This perfectly matches the "hover wolkje gaat weg als je je muis beweegt" requirement.
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (visible) setVisible(false);
+    timerRef.current = setTimeout(() => {
+      setVisible(true);
+    }, 5000);
+  };
+
+  return (
+    <div 
+      className={`relative ${className}`}
+      onMouseEnter={handleMouseEnter} 
+      onMouseLeave={handleMouseLeave}
+      onMouseMove={handleMouseMove}
+    >
+      {children}
+      {visible && (
+        <div className="absolute z-[100] bottom-full mb-3 left-1/2 -translate-x-1/2 w-64 bg-slate-900 text-white text-xs p-4 rounded-2xl shadow-2xl animate-in fade-in zoom-in-95 pointer-events-none">
+          <p className="font-bold text-blue-400 mb-1 tracking-wider uppercase text-[10px]">Demo Uitleg</p>
+          <p className="leading-relaxed">{text}</p>
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900"></div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function DemoPage() {
   const [view, setView] = useState<'RECRUITER' | 'MANAGER'>('RECRUITER');
   const [demoState, setDemoState] = useState<DemoState>('IDLE');
   
-  // Fake candidate data for the storytelling
   const [parsedData, setParsedData] = useState<{ skills: string[]; matchedVacancy: string; score: number } | null>(null);
 
-  // Hidden reset shortcut (Ctrl + D)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === 'd') {
@@ -50,24 +93,26 @@ export default function DemoPage() {
     <div className="flex h-screen bg-gray-50 text-slate-900 font-sans selection:bg-blue-100 overflow-hidden relative">
       
       {/* DEMO BANNER */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-blue-900 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-4 animate-in slide-in-from-top-10 duration-700">
-        <span className="text-sm font-bold flex items-center gap-2"><Zap className="w-4 h-4 text-yellow-400" /> Interactive Demo Mode</span>
-        <div className="h-4 w-px bg-blue-700"></div>
-        <div className="flex bg-blue-800 p-1 rounded-full">
-          <button 
-            onClick={() => setView('RECRUITER')}
-            className={`px-3 py-1 rounded-full text-xs font-bold transition-all duration-300 ${view === 'RECRUITER' ? 'bg-white shadow-sm text-blue-900' : 'text-blue-200 hover:text-white'}`}
-          >
-            Recruiter
-          </button>
-          <button 
-            onClick={() => setView('MANAGER')}
-            className={`px-3 py-1 rounded-full text-xs font-bold transition-all duration-300 ${view === 'MANAGER' ? 'bg-white shadow-sm text-blue-900' : 'text-blue-200 hover:text-white'}`}
-          >
-            Manager
-          </button>
+      <DemoTooltip text="Hiermee wissel je veilig tussen de rollen in de app. Ideaal om tijdens een presentatie snel perspectief te wisselen." className="absolute top-4 left-1/2 -translate-x-1/2 z-50">
+        <div className="bg-blue-900 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-4 animate-in slide-in-from-top-10 duration-700">
+          <span className="text-sm font-bold flex items-center gap-2"><Zap className="w-4 h-4 text-yellow-400" /> Interactive Demo Mode</span>
+          <div className="h-4 w-px bg-blue-700"></div>
+          <div className="flex bg-blue-800 p-1 rounded-full">
+            <button 
+              onClick={() => setView('RECRUITER')}
+              className={`px-3 py-1 rounded-full text-xs font-bold transition-all duration-300 ${view === 'RECRUITER' ? 'bg-white shadow-sm text-blue-900' : 'text-blue-200 hover:text-white'}`}
+            >
+              Recruiter
+            </button>
+            <button 
+              onClick={() => setView('MANAGER')}
+              className={`px-3 py-1 rounded-full text-xs font-bold transition-all duration-300 ${view === 'MANAGER' ? 'bg-white shadow-sm text-blue-900' : 'text-blue-200 hover:text-white'}`}
+            >
+              Manager
+            </button>
+          </div>
         </div>
-      </div>
+      </DemoTooltip>
 
       {/* FAKE SIDEBAR */}
       <aside className="w-64 bg-white border-r border-slate-200 flex flex-col shadow-sm z-10 transition-colors duration-300 shrink-0">
@@ -188,141 +233,149 @@ function RecruiterView({ demoState, setDemoState, simulateIntake, parsedData }: 
         </div>
 
         {/* Upload Box */}
-        <div 
-          className={`border-2 border-dashed rounded-3xl p-12 text-center transition-all duration-500 relative overflow-hidden
-            ${demoState === 'IDLE' ? 'border-indigo-300 bg-indigo-50/50 hover:bg-indigo-50 cursor-pointer shadow-inner' : 'border-slate-200 bg-white opacity-50 pointer-events-none'}`}
-          onClick={simulateIntake}
-        >
-          {demoState === 'IDLE' ? (
-            <>
-              <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                <Upload className="w-8 h-8 text-indigo-600" />
+        <DemoTooltip className="block w-full" text="Wanneer je hier een PDF in dropt, wordt deze veilig naar onze afgeschermde Inngest servers gestuurd. Dit voorkomt dat je eigen webserver ooit vastloopt door zware PDF bestanden.">
+          <div 
+            className={`border-2 border-dashed rounded-3xl p-12 text-center transition-all duration-500 relative overflow-hidden
+              ${demoState === 'IDLE' ? 'border-indigo-300 bg-indigo-50/50 hover:bg-indigo-50 cursor-pointer shadow-inner' : 'border-slate-200 bg-white opacity-50 pointer-events-none'}`}
+            onClick={simulateIntake}
+          >
+            {demoState === 'IDLE' ? (
+              <>
+                <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                  <Upload className="w-8 h-8 text-indigo-600" />
+                </div>
+                <p className="font-bold text-lg text-indigo-900 mb-1">Klik om "Jan_de_Vries_CV.pdf" te uploaden</p>
+                <p className="text-indigo-600/70 text-sm">Of sleep het bestand hierheen</p>
+              </>
+            ) : (
+              <div className="flex flex-col items-center">
+                <FileText className="w-12 h-12 text-slate-300 mb-4" />
+                <p className="text-slate-500 font-medium">Document wordt verwerkt...</p>
               </div>
-              <p className="font-bold text-lg text-indigo-900 mb-1">Klik om "Jan_de_Vries_CV.pdf" te uploaden</p>
-              <p className="text-indigo-600/70 text-sm">Of sleep het bestand hierheen</p>
-            </>
-          ) : (
-            <div className="flex flex-col items-center">
-              <FileText className="w-12 h-12 text-slate-300 mb-4" />
-              <p className="text-slate-500 font-medium">Document wordt verwerkt...</p>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        </DemoTooltip>
 
         {/* Value Prop Banner */}
         {demoState === 'REVIEW' && (
-          <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-6 animate-in slide-in-from-bottom-4 fade-in duration-700 shadow-sm">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center shrink-0">
-                <Clock className="w-6 h-6 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-emerald-900 font-bold">Tijd bespaard: ~14 minuten</p>
-                <p className="text-emerald-700 text-sm">Normaal handwerk vs 4 seconden AI-verwerking.</p>
+          <DemoTooltip className="block w-full" text="We berekenen exact hoeveel tijd recruiters besparen per klik, zodat de ROI voor jullie direct transparant in het dashboard verschijnt.">
+            <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-6 animate-in slide-in-from-bottom-4 fade-in duration-700 shadow-sm">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center shrink-0">
+                  <Clock className="w-6 h-6 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-emerald-900 font-bold">Tijd bespaard: ~14 minuten</p>
+                  <p className="text-emerald-700 text-sm">Normaal handwerk vs 4 seconden AI-verwerking.</p>
+                </div>
               </div>
             </div>
-          </div>
+          </DemoTooltip>
         )}
       </div>
 
       {/* Right Column: AI Output */}
       <div className="xl:col-span-7">
-        <div className="bg-white rounded-3xl shadow-md border border-slate-200 overflow-hidden min-h-[500px] flex flex-col">
-          
-          <div className="border-b bg-slate-50/80 px-8 py-4 flex items-center justify-between">
-            <h3 className="font-bold text-slate-800 flex items-center gap-2">
-              <BrainCircuit className="w-5 h-5 text-indigo-600" />
-              AI Extractie & Matching
-            </h3>
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 bg-slate-200 px-3 py-1 rounded-full">Live Resultaat</span>
-          </div>
+        <DemoTooltip className="flex flex-col h-full" text="Dit resultaat wordt via de 'AI Gateway' gegenereerd. De CV data is eerst gestript van persoonsgegevens voordat deze ooit de LLM bereikt. 100% veilig.">
+          <div className="bg-white rounded-3xl shadow-md border border-slate-200 overflow-hidden min-h-[500px] flex flex-col h-full">
+            
+            <div className="border-b bg-slate-50/80 px-8 py-4 flex items-center justify-between">
+              <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                <BrainCircuit className="w-5 h-5 text-indigo-600" />
+                AI Extractie & Matching
+              </h3>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 bg-slate-200 px-3 py-1 rounded-full">Live Resultaat</span>
+            </div>
 
-          <div className="p-8 flex-1 flex flex-col justify-center relative">
-            {demoState === 'IDLE' && (
-              <div className="text-center text-slate-400">
-                <BrainCircuit className="w-16 h-16 mx-auto mb-4 opacity-20" />
-                <p>Wachtend op input...</p>
-              </div>
-            )}
-
-            {demoState === 'LOADING' && (
-              <div className="flex flex-col items-center justify-center space-y-6">
-                <div className="w-12 h-12 border-4 border-slate-100 border-t-indigo-600 rounded-full animate-spin"></div>
-                <p className="text-slate-500 font-medium animate-pulse">PDF tekst extraheren (OCR)...</p>
-              </div>
-            )}
-
-            {demoState === 'ANALYZING' && (
-              <div className="space-y-6 w-full max-w-md mx-auto">
-                <div className="flex items-center gap-4">
-                  <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center animate-pulse"><CheckCircle2 className="w-4 h-4 text-indigo-600" /></div>
-                  <p className="text-slate-700 font-medium">Structureren van werkervaring...</p>
+            <div className="p-8 flex-1 flex flex-col justify-center relative">
+              {demoState === 'IDLE' && (
+                <div className="text-center text-slate-400">
+                  <BrainCircuit className="w-16 h-16 mx-auto mb-4 opacity-20" />
+                  <p>Wachtend op input...</p>
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center animate-pulse" style={{ animationDelay: '0.5s'}}><CheckCircle2 className="w-4 h-4 text-indigo-600" /></div>
-                  <p className="text-slate-700 font-medium">Matchen met actieve vacatures...</p>
-                </div>
-                <div className="flex items-center gap-4 opacity-50">
-                  <div className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-indigo-600 animate-spin"></div>
-                  <p className="text-slate-700 font-medium">Privacy check uitvoeren (AVG)...</p>
-                </div>
-              </div>
-            )}
+              )}
 
-            {demoState === 'REVIEW' && parsedData && (
-              <div className="animate-in fade-in slide-in-from-right-8 duration-700 space-y-6 w-full">
-                
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h2 className="text-3xl font-bold text-slate-900">Jan de Vries</h2>
-                    <p className="text-slate-500 flex items-center gap-2 mt-1">
-                      <Mail className="w-4 h-4" /> jan.devries@voorbeeld.nl
-                    </p>
+              {demoState === 'LOADING' && (
+                <div className="flex flex-col items-center justify-center space-y-6">
+                  <div className="w-12 h-12 border-4 border-slate-100 border-t-indigo-600 rounded-full animate-spin"></div>
+                  <p className="text-slate-500 font-medium animate-pulse">PDF tekst extraheren (OCR)...</p>
+                </div>
+              )}
+
+              {demoState === 'ANALYZING' && (
+                <div className="space-y-6 w-full max-w-md mx-auto">
+                  <div className="flex items-center gap-4">
+                    <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center animate-pulse"><CheckCircle2 className="w-4 h-4 text-indigo-600" /></div>
+                    <p className="text-slate-700 font-medium">Structureren van werkervaring...</p>
                   </div>
-                  <div className="bg-emerald-50 border border-emerald-100 px-4 py-2 rounded-2xl flex flex-col items-center shadow-sm">
-                    <span className="text-emerald-600 text-[10px] font-black uppercase tracking-widest">Match Score</span>
-                    <span className="text-emerald-600 font-black text-3xl">{parsedData.score}%</span>
+                  <div className="flex items-center gap-4">
+                    <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center animate-pulse" style={{ animationDelay: '0.5s'}}><CheckCircle2 className="w-4 h-4 text-indigo-600" /></div>
+                    <p className="text-slate-700 font-medium">Matchen met actieve vacatures...</p>
+                  </div>
+                  <div className="flex items-center gap-4 opacity-50">
+                    <div className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-indigo-600 animate-spin"></div>
+                    <p className="text-slate-700 font-medium">Privacy check uitvoeren (AVG)...</p>
                   </div>
                 </div>
+              )}
 
-                <div className="space-y-4">
-                  <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200 shadow-sm">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Beste Vacature Match</p>
-                    <p className="font-semibold flex items-center gap-2 text-slate-800">
-                      <Briefcase className="w-5 h-5 text-indigo-600" />
-                      {parsedData.matchedVacancy}
-                    </p>
-                    <p className="text-sm text-slate-600 mt-3 leading-relaxed border-l-2 border-indigo-200 pl-3">
-                      "Sterke match op basis van 5+ jaar Java ervaring. Ontbrekende kennis van AWS wordt gecompenseerd door brede Cloud Architectuur ervaring."
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Gevonden Skills</p>
-                    <div className="flex flex-wrap gap-2">
-                      {parsedData.skills.map((s: string) => (
-                        <span key={s} className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-bold border border-indigo-100 shadow-sm">
-                          {s}
-                        </span>
-                      ))}
+              {demoState === 'REVIEW' && parsedData && (
+                <div className="animate-in fade-in slide-in-from-right-8 duration-700 space-y-6 w-full">
+                  
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h2 className="text-3xl font-bold text-slate-900">Jan de Vries</h2>
+                      <p className="text-slate-500 flex items-center gap-2 mt-1">
+                        <Mail className="w-4 h-4" /> jan.devries@voorbeeld.nl
+                      </p>
+                    </div>
+                    <div className="bg-emerald-50 border border-emerald-100 px-4 py-2 rounded-2xl flex flex-col items-center shadow-sm">
+                      <span className="text-emerald-600 text-[10px] font-black uppercase tracking-widest">Match Score</span>
+                      <span className="text-emerald-600 font-black text-3xl">{parsedData.score}%</span>
                     </div>
                   </div>
-                </div>
 
-                {/* Action Buttons */}
-                <div className="pt-6 border-t flex gap-4">
-                  <button onClick={() => setDemoState('IDLE')} className="px-6 py-3 rounded-xl font-bold text-slate-600 bg-white border hover:bg-slate-50 transition-colors flex items-center gap-2 shadow-sm">
-                    <XCircle className="w-5 h-5" /> Afwijzen
-                  </button>
-                  <button onClick={() => setDemoState('CLIFFHANGER')} className="flex-1 px-6 py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2">
-                    Goedkeuren & Exporteer <ChevronRight className="w-5 h-5" />
-                  </button>
-                </div>
+                  <div className="space-y-4">
+                    <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200 shadow-sm">
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Beste Vacature Match</p>
+                      <p className="font-semibold flex items-center gap-2 text-slate-800">
+                        <Briefcase className="w-5 h-5 text-indigo-600" />
+                        {parsedData.matchedVacancy}
+                      </p>
+                      <p className="text-sm text-slate-600 mt-3 leading-relaxed border-l-2 border-indigo-200 pl-3">
+                        "Sterke match op basis van 5+ jaar Java ervaring. Ontbrekende kennis van AWS wordt gecompenseerd door brede Cloud Architectuur ervaring."
+                      </p>
+                    </div>
 
-              </div>
-            )}
+                    <div>
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Gevonden Skills</p>
+                      <div className="flex flex-wrap gap-2">
+                        {parsedData.skills.map((s: string) => (
+                          <span key={s} className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-bold border border-indigo-100 shadow-sm">
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="pt-6 border-t flex gap-4 relative z-50">
+                    <button onClick={() => setDemoState('IDLE')} className="px-6 py-3 rounded-xl font-bold text-slate-600 bg-white border hover:bg-slate-50 transition-colors flex items-center gap-2 shadow-sm relative z-50 cursor-pointer pointer-events-auto">
+                      <XCircle className="w-5 h-5" /> Afwijzen
+                    </button>
+                    <DemoTooltip className="flex-1" text="Zodra je goedkeurt stuurt ons systeem dit direct via de API de poort uit naar Carerix/Bullhorn/Recruitee, en wist het direct de originele PDF.">
+                      <button onClick={() => setDemoState('CLIFFHANGER')} className="w-full px-6 py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2">
+                        Goedkeuren & Exporteer <ChevronRight className="w-5 h-5" />
+                      </button>
+                    </DemoTooltip>
+                  </div>
+
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        </DemoTooltip>
       </div>
     </div>
   );
@@ -344,58 +397,64 @@ function ManagerView() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatCard 
-          icon={<Clock className="text-indigo-600 w-6 h-6" />}
-          title="Tijd Bespaard"
-          value="184 uur"
-          trend="+12% tov vorige maand"
-          color="indigo"
-        />
-        <StatCard 
-          icon={<Zap className="text-emerald-600 w-6 h-6" />}
-          title="Verwerkte CV's"
-          value="782"
-          trend="100% geautomatiseerd"
-          color="emerald"
-        />
-        <StatCard 
-          icon={<BarChart3 className="text-purple-600 w-6 h-6" />}
-          title="Geschatte ROI"
-          value="€ 6.440"
-          trend="Gebaseerd op €35/uur"
-          color="purple"
-        />
-      </div>
+      <DemoTooltip className="block w-full" text="Deze statistieken worden op de achtergrond real-time gecalculeerd door Drizzle ORM vanuit de geïsoleerde klantomgeving (Tenant Isolation).">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <StatCard 
+            icon={<Clock className="text-indigo-600 w-6 h-6" />}
+            title="Tijd Bespaard"
+            value="184 uur"
+            trend="+12% tov vorige maand"
+            color="indigo"
+          />
+          <StatCard 
+            icon={<Zap className="text-emerald-600 w-6 h-6" />}
+            title="Verwerkte CV's"
+            value="782"
+            trend="100% geautomatiseerd"
+            color="emerald"
+          />
+          <StatCard 
+            icon={<BarChart3 className="text-purple-600 w-6 h-6" />}
+            title="Geschatte ROI"
+            value="€ 6.440"
+            trend="Gebaseerd op €35/uur"
+            color="purple"
+          />
+        </div>
+      </DemoTooltip>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-4">
         {/* Integrations Mock */}
-        <div className="bg-white rounded-3xl p-8 border shadow-sm">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-xl font-bold">Actieve Koppelingen</h3>
-            <button onClick={() => setSynced(true)} className="text-emerald-600 hover:text-white hover:bg-emerald-600 transition-colors text-sm font-bold bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4"/> {synced ? 'Alles gesynchroniseerd!' : 'Gezond (Klik om te testen)'}
-            </button>
+        <DemoTooltip className="block w-full h-full" text="Als een externe ATS koppeling er tijdelijk uitligt, houdt RecruitAI de verwerkte CV's vast in een queue, en probeert het later opnieuw zonder dataverlies.">
+          <div className="bg-white rounded-3xl p-8 border shadow-sm h-full">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold">Actieve Koppelingen</h3>
+              <button onClick={() => setSynced(true)} className="text-emerald-600 hover:text-white hover:bg-emerald-600 transition-colors text-sm font-bold bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4"/> {synced ? 'Alles gesynchroniseerd!' : 'Gezond (Klik om te testen)'}
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <IntegrationRow name="Bullhorn ATS" status="Actief" syncs={synced ? "783 syncs" : "782 syncs"} highlight={synced} />
+              <IntegrationRow name="Slack Notificaties" status="Actief" syncs="144 alerts" />
+              <IntegrationRow name="Microsoft Teams" status="Pauze" syncs="0 syncs" inactive />
+            </div>
           </div>
-          
-          <div className="space-y-4">
-            <IntegrationRow name="Bullhorn ATS" status="Actief" syncs={synced ? "783 syncs" : "782 syncs"} highlight={synced} />
-            <IntegrationRow name="Slack Notificaties" status="Actief" syncs="144 alerts" />
-            <IntegrationRow name="Microsoft Teams" status="Pauze" syncs="0 syncs" inactive />
-          </div>
-        </div>
+        </DemoTooltip>
 
         {/* Compliance & Audit */}
-        <div className="bg-slate-900 rounded-3xl p-8 shadow-xl text-white">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-xl font-bold flex items-center gap-2"><ShieldCheck className="w-6 h-6 text-emerald-400"/> AVG Compliance Log</h3>
+        <DemoTooltip className="block w-full h-full" text="Voor enterprise compliance en AVG-wetgeving slaan wij iedere actie onveranderlijk (append-only) op in ons systeem via geverifieerde Audit Logs.">
+          <div className="bg-slate-900 rounded-3xl p-8 shadow-xl text-white h-full">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold flex items-center gap-2"><ShieldCheck className="w-6 h-6 text-emerald-400"/> AVG Compliance Log</h3>
+            </div>
+            <div className="space-y-6 relative before:absolute before:inset-0 before:ml-2 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-700 before:to-transparent">
+               <AuditRow time="10:42" text="CV data geëxporteerd naar Bullhorn (Kandidaat: Jan D.)" />
+               <AuditRow time="10:42" text="Origineel PDF document definitief vernietigd van server." highlight />
+               <AuditRow time="09:15" text="CV data geëxporteerd naar Bullhorn (Kandidaat: Sarah M.)" />
+            </div>
           </div>
-          <div className="space-y-6 relative before:absolute before:inset-0 before:ml-2 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-700 before:to-transparent">
-             <AuditRow time="10:42" text="CV data geëxporteerd naar Bullhorn (Kandidaat: Jan D.)" />
-             <AuditRow time="10:42" text="Origineel PDF document definitief vernietigd van server." highlight />
-             <AuditRow time="09:15" text="CV data geëxporteerd naar Bullhorn (Kandidaat: Sarah M.)" />
-          </div>
-        </div>
+        </DemoTooltip>
       </div>
     </div>
   );
