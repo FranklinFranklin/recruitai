@@ -20,12 +20,11 @@ function XRayTooltip({ children, text, isVisible, className = "" }: { children: 
       </div>
       
       {isVisible && (
-        <div className="absolute bottom-full mb-4 left-1/2 -translate-x-1/2 w-72 bg-slate-900/95 backdrop-blur-md text-white text-xs p-5 rounded-2xl shadow-2xl animate-in fade-in zoom-in-95 slide-in-from-bottom-2 pointer-events-none border border-slate-700">
-          <p className="font-black text-indigo-400 mb-2 tracking-widest uppercase text-[10px] flex items-center gap-1">
-            <Zap className="w-3 h-3"/> Sales X-Ray
+        <div className="absolute z-[9999] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 bg-slate-900/95 backdrop-blur-md text-white text-sm p-6 rounded-2xl shadow-2xl animate-in fade-in zoom-in-95 pointer-events-none border border-slate-700">
+          <p className="font-black text-indigo-400 mb-2 tracking-widest uppercase text-xs flex items-center gap-2">
+            <Zap className="w-4 h-4"/> Sales X-Ray
           </p>
-          <p className="leading-relaxed text-slate-200 text-sm">{text}</p>
-          <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900/95"></div>
+          <p className="leading-relaxed text-slate-200">{text}</p>
         </div>
       )}
     </div>
@@ -296,9 +295,9 @@ function RecruiterView({ demoState, setDemoState, simulateIntake, parsedData, se
       {/* Right Column: AI Output */}
       <div className="xl:col-span-7">
         <XRayTooltip isVisible={isXRayMode} className="flex flex-col h-full" text="Dit resultaat wordt via de 'AI Gateway' gegenereerd. De CV data is eerst gestript van persoonsgegevens voordat deze ooit de LLM bereikt. 100% veilig.">
-          <div className="bg-white rounded-3xl shadow-md border border-slate-200 overflow-hidden min-h-[500px] flex flex-col h-full">
+          <div className="bg-white rounded-3xl shadow-md border border-slate-200 min-h-[500px] flex flex-col h-full">
             
-            <div className="border-b bg-slate-50/80 px-8 py-4 flex items-center justify-between">
+            <div className="border-b bg-slate-50/80 rounded-t-3xl px-8 py-4 flex items-center justify-between">
               <h3 className="font-bold text-slate-800 flex items-center gap-2">
                 <BrainCircuit className="w-5 h-5 text-indigo-600" />
                 AI Extractie & Matching
