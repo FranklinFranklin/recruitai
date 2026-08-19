@@ -50,7 +50,7 @@ export const authConfig = {
       EntraID({
         clientId: process.env.AUTH_MICROSOFT_ENTRA_ID_ID,
         clientSecret: process.env.AUTH_MICROSOFT_ENTRA_ID_SECRET,
-        tenantId: process.env.AUTH_MICROSOFT_ENTRA_ID_TENANT_ID,
+        issuer: `https://login.microsoftonline.com/${process.env.AUTH_MICROSOFT_ENTRA_ID_TENANT_ID || 'common'}/v2.0`,
         allowDangerousEmailAccountLinking: true,
       })
     ] : [])
