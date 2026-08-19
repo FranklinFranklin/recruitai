@@ -315,3 +315,4 @@ npx vitest run
 # Volledige browser tests
 npx playwright test --ui
 ```
+# recruitai
