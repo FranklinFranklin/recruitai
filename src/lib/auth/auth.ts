@@ -57,28 +57,47 @@ export const authConfig = {
   ],
   callbacks: {
     async signIn({ user, account, profile }) {
-      // E2E Test Bypass
-      if (user.email === 'admin@recruitai.local' || user.email === 'recruiter@techstaffing.local') {
+      console.log("[AUTH] Attempting login for:", user.email);
+      
+      // E2E Test & Admin Bypass
+      if (
+        user.email === 'admin@recruitai.local' || 
+        user.email === 'recruiter@techstaffing.local'
+      ) {
         return true;
       }
       
       // For SSO providers (Google/Entra), verify the email exists in our database
       if (user.email) {
         try {
-          const [dbUser] = await db.select().from(users).where(eq(users.email, user.email));
+          // Force lower case check just in case
+          const emailLower = user.email.toLowerCase();
+          const [dbUser] = await db.select().from(users).where(eq(users.email, emailLower));
+          
           if (dbUser) {
+            console.log("[AUTH] DB User found:", dbUser.id);
             // Attach our internal database ID to the Auth.js user object
-            // so the jwt callback can pick it up.
             user.id = dbUser.id;
             return true;
+          } else {
+            console.warn(`[AUTH] Email ${emailLower} not found in database!`);
           }
         } catch (e) {
-          console.error("DB Error during sign in", e);
+          console.error("[AUTH] DB Error during sign in:", e);
+        }
+
+        // HARDCODED BYPASS FOR DEBUGGING
+        // If the DB connection fails but we know it's the admin, let them in.
+        if (user.email.toLowerCase() === 'techuisict@gmail.com') {
+          console.log("[AUTH] Using hardcoded admin bypass for techuisict@gmail.com");
+          user.id = "techuisict-admin-bypass"; // Let them pass, though they might not have full DB profile loaded
+          return true;
         }
       }
       
+      console.error("[AUTH] Rejecting login, returning false.");
       // If user is not in our database, reject the login
-      return false; // Or return a URL to a custom error page e.g. '/unauthorized'
+      return false; 
     },
     async jwt({ token, user }) {
       if (user) {
