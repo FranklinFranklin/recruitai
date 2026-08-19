@@ -1,8 +1,9 @@
 import { Users as UsersIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { db } from '@/lib/db';
-import { users } from '@/lib/db/schema';
+import { users, tenants } from '@/lib/db/schema';
 import { count } from 'drizzle-orm';
 import Link from 'next/link';
+import AddUserModal from './AddUserModal';
 
 export default async function UsersPage({
   searchParams,
@@ -17,10 +18,12 @@ export default async function UsersPage({
   // Fetch real data from the database
   let totalUsers = { count: 0 };
   let data: any[] = [];
+  let tenantList: { id: string, name: string }[] = [];
   try {
     const [res] = await db.select({ count: count() }).from(users);
     if (res) totalUsers = res;
     data = await db.select().from(users).limit(pageSize).offset(offset);
+    tenantList = await db.select({ id: tenants.id, name: tenants.name }).from(tenants);
   } catch (error) {
     console.error("Database connection failed on Users Page", error);
   }
@@ -31,6 +34,7 @@ export default async function UsersPage({
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Global User Management</h2>
+        <AddUserModal tenants={tenantList} />
       </div>
 
       <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
