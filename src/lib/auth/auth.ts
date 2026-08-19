@@ -6,6 +6,8 @@ import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 export const authConfig = {
+  secret: process.env.AUTH_SECRET,
+  trustHost: true,
   providers: [
     CredentialsProvider({
       name: 'Local Development Login',
