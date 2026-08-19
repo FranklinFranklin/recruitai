@@ -15,8 +15,15 @@ export default async function TenantsPage({
   const offset = (page - 1) * pageSize;
 
   // Fetch real data from the database
-  const [totalTenants] = await db.select({ count: count() }).from(tenants);
-  const data = await db.select().from(tenants).limit(pageSize).offset(offset);
+  let totalTenants = { count: 0 };
+  let data: any[] = [];
+  try {
+    const [res] = await db.select({ count: count() }).from(tenants);
+    if (res) totalTenants = res;
+    data = await db.select().from(tenants).limit(pageSize).offset(offset);
+  } catch (error) {
+    console.error("Database connection failed on Tenants Page", error);
+  }
   
   const totalPages = Math.ceil(totalTenants.count / pageSize);
 

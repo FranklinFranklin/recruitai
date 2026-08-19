@@ -15,8 +15,15 @@ export default async function UsersPage({
   const offset = (page - 1) * pageSize;
 
   // Fetch real data from the database
-  const [totalUsers] = await db.select({ count: count() }).from(users);
-  const data = await db.select().from(users).limit(pageSize).offset(offset);
+  let totalUsers = { count: 0 };
+  let data: any[] = [];
+  try {
+    const [res] = await db.select({ count: count() }).from(users);
+    if (res) totalUsers = res;
+    data = await db.select().from(users).limit(pageSize).offset(offset);
+  } catch (error) {
+    console.error("Database connection failed on Users Page", error);
+  }
   
   const totalPages = Math.ceil(totalUsers.count / pageSize);
 
