@@ -13,10 +13,11 @@ export default async function SystemHealthPage() {
   // 1. Perform Health Checks
   let dbStatus = false;
   try {
-    await db.execute(sql`SELECT 1`);
-    dbStatus = true;
+    const res = await db.execute(sql`SELECT 1`);
+    if (res) dbStatus = true;
   } catch (e) {
-    console.error("DB Health Check Failed:", e);
+    console.error("[System Health] Database Connection Error:", e);
+    dbStatus = false;
   }
 
   // Check common AI keys or default to true for local environment

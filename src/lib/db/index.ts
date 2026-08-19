@@ -6,7 +6,11 @@ import { sql } from 'drizzle-orm';
 const connectionString = process.env.DATABASE_URL!;
 
 // Disable prefetch as it is not supported for "Transaction" pool mode
-const client = postgres(connectionString, { prepare: false });
+// Add ssl: 'require' which is mandatory for Supabase connections from Vercel
+const client = postgres(connectionString, { 
+  prepare: false,
+  ssl: process.env.NODE_ENV === 'production' ? 'require' : false
+});
 
 export const db = drizzle(client, { schema });
 
