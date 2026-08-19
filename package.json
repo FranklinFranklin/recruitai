@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npx drizzle-kit push && (npm run db:seed || true) && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "db:seed": "tsx src/lib/db/seed.ts",
