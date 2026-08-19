@@ -149,7 +149,9 @@ export const securityEvents = pgTable('security_events', {
   details: text('details'),
   ipAddress: text('ip_address'),
   createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
-});
+}, (table) => [
+  tenantIsolationPolicy
+]).enableRLS();
 
 // ----------------------------------------------------------------------
 // INTEGRATION ACCOUNTS (Tokens)

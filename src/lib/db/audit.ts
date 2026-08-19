@@ -26,6 +26,17 @@ export async function logSecurityEvent(
   tenantId?: string,
   ipAddress?: string
 ) {
+  // Dual-write to stdout for immutable SIEM ingestion
+  console.log(JSON.stringify({
+    timestamp: new Date().toISOString(),
+    event_category: 'SECURITY',
+    eventType,
+    severity,
+    details,
+    tenantId,
+    ipAddress
+  }));
+
   await db.insert(securityEvents).values({
     tenantId,
     eventType,

@@ -24,11 +24,9 @@ export async function createTenantAction(formData: FormData) {
 
     // 2. If credentials are provided, save the integration
     if (provider && apiKey) {
-      await db.insert(integrationAccounts).values({
-        id: crypto.randomUUID(),
-        tenantId: newTenant.id,
-        provider,
-        accessToken: apiKey, // In production, we encrypt this using our ENCRYPTION_KEY
+      const { TokenVault } = await import('@/lib/integrations/vault');
+      await TokenVault.saveTokens(newTenant.id, provider, {
+        accessToken: apiKey,
       });
     }
 

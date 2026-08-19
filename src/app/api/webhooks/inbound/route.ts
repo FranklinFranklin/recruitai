@@ -85,6 +85,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Only PDF files are allowed' }, { status: 415 });
     }
 
+    // Verify PDF Magic Bytes (%PDF-)
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    if (buffer.length < 5 || buffer.toString('utf8', 0, 5) !== '%PDF-') {
+      await logSecurityEvent(tenantId, 'INBOUND_MAGIC_BYTES_FAILED', 'File MIME was application/pdf but magic bytes did not match %PDF-');
+      return NextResponse.json({ error: 'Invalid PDF file structure' }, { status: 415 });
+    }
+
     // 4. Mock Secure Upload
     // In a real 2026 app, we would pipe this to an S3 bucket here via a presigned URL or direct AWS SDK.
     // We mock this by generating a random key.

@@ -26,11 +26,6 @@ export async function requireSystemAdmin(options?: { requireWriteAccess?: boolea
     // Fallback
   }
 
-  // VIP & E2E Fallback
-  if (session.user.email === 'admin@recruitai.local' || session.user.email?.toLowerCase() === 'techuisict@gmail.com') {
-    globalRole = 'SYSTEM_ADMIN';
-    dbUser = { globalRole: 'SYSTEM_ADMIN' };
-  }
 
   if (!dbUser) redirect('/api/auth/signin');
 
@@ -62,18 +57,13 @@ export async function requireTenantMember(requestedTenantId?: string) {
   const cookieStore = await cookies();
   const headersList = await headers();
   
-  let targetTenantId = requestedTenantId 
+  const targetTenantId = requestedTenantId 
     || headersList.get('x-tenant-id') 
     || cookieStore.get('x-active-tenant')?.value;
 
   try {
     if (!targetTenantId) {
-      const userMemberships = await db.select().from(memberships).where(eq(memberships.userId, session.user.id));
-      if (userMemberships.length > 0) {
-        targetTenantId = userMemberships[0].tenantId;
-      } else {
-        throw new Error('Tenant context missing and user has no memberships. Security violation.');
-      }
+      throw new Error('Tenant context missing. Security violation.');
     }
 
     const userMemberships = await db.select()
@@ -95,14 +85,7 @@ export async function requireTenantMember(requestedTenantId?: string) {
       role: userMemberships[0].role 
     };
   } catch (error) {
-    // E2E Test Fallback
-    if (session.user.email === 'recruiter@techstaffing.local') {
-      return {
-        user: session.user,
-        activeTenantId: targetTenantId || 'test-tenant',
-        role: 'RECRUITER'
-      }
-    }
+
     throw error;
   }
 }

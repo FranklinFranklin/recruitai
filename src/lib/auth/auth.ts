@@ -11,39 +11,37 @@ export const authConfig = {
   secret: process.env.AUTH_SECRET,
   trustHost: true,
   providers: [
-    CredentialsProvider({
-      name: 'Local Development Login',
-      credentials: {
-        email: { label: "Email (from seed list)", type: "email", placeholder: "admin@recruitai.local" },
-        password: { label: "Password (any)", type: "password" }
-      },
-      async authorize(credentials) {
-        if (!credentials?.email) return null;
-        
-        // E2E Test Bypass
-        if (credentials.email === 'admin@recruitai.local' && credentials.password === '1234') {
-          return { id: 'test-admin', name: 'Super Admin', email: 'admin@recruitai.local', globalRole: 'SYSTEM_ADMIN' };
+    ...(process.env.NODE_ENV !== 'production' ? [
+      CredentialsProvider({
+        name: 'Local Development Login',
+        credentials: {
+          email: { label: "Email (from seed list)", type: "email", placeholder: "admin@recruitai.local" },
+          password: { label: "Password (any)", type: "password" }
+        },
+        async authorize(credentials) {
+          if (!credentials?.email) return null;
+          
+          if (credentials.email === 'admin@recruitai.local' && credentials.password === '1234') {
+            return { id: 'test-admin', name: 'Super Admin', email: 'admin@recruitai.local', globalRole: 'SYSTEM_ADMIN' };
+          }
+          if (credentials.email === 'recruiter@techstaffing.local' && credentials.password === '1234') {
+            return { id: 'test-recruiter', name: 'John Recruiter', email: 'recruiter@techstaffing.local', globalRole: 'USER' };
+          }
+          
+          const [user] = await db.select().from(users).where(eq(users.email, credentials.email as string));
+          
+          if (user) {
+            return { id: user.id, name: user.name, email: user.email };
+          }
+          return null;
         }
-        if (credentials.email === 'recruiter@techstaffing.local' && credentials.password === '1234') {
-          return { id: 'test-recruiter', name: 'John Recruiter', email: 'recruiter@techstaffing.local', globalRole: 'USER' };
-        }
-        
-        // For Local Development ONLY: We trust the email without a password check
-        // because we haven't wired up Enterprise SSO locally.
-        const [user] = await db.select().from(users).where(eq(users.email, credentials.email as string));
-        
-        if (user) {
-          // Return the user object so Auth.js creates the session
-          return { id: user.id, name: user.name, email: user.email };
-        }
-        return null;
-      }
-    }),
+      })
+    ] : []),
     ...(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET ? [
       Google({
         clientId: process.env.AUTH_GOOGLE_ID,
         clientSecret: process.env.AUTH_GOOGLE_SECRET,
-        allowDangerousEmailAccountLinking: true,
+        allowDangerousEmailAccountLinking: false,
       })
     ] : []),
     ...(process.env.AUTH_MICROSOFT_ENTRA_ID_ID && process.env.AUTH_MICROSOFT_ENTRA_ID_SECRET ? [
@@ -51,7 +49,7 @@ export const authConfig = {
         clientId: process.env.AUTH_MICROSOFT_ENTRA_ID_ID,
         clientSecret: process.env.AUTH_MICROSOFT_ENTRA_ID_SECRET,
         issuer: `https://login.microsoftonline.com/${process.env.AUTH_MICROSOFT_ENTRA_ID_TENANT_ID || 'common'}/v2.0`,
-        allowDangerousEmailAccountLinking: true,
+        allowDangerousEmailAccountLinking: false,
       })
     ] : [])
   ],
@@ -59,24 +57,22 @@ export const authConfig = {
     async signIn({ user, account, profile }) {
       console.log("[AUTH] Attempting login for:", user.email);
       
-      // E2E Test & Admin Bypass
-      if (
-        user.email === 'admin@recruitai.local' || 
-        user.email === 'recruiter@techstaffing.local'
-      ) {
-        return true;
+      if (process.env.NODE_ENV !== 'production') {
+        if (
+          user.email === 'admin@recruitai.local' || 
+          user.email === 'recruiter@techstaffing.local'
+        ) {
+          return true;
+        }
       }
       
-      // For SSO providers (Google/Entra), verify the email exists in our database
       if (user.email) {
         try {
-          // Force lower case check just in case
           const emailLower = user.email.toLowerCase();
           const [dbUser] = await db.select().from(users).where(eq(users.email, emailLower));
           
           if (dbUser) {
             console.log("[AUTH] DB User found:", dbUser.id);
-            // Attach our internal database ID to the Auth.js user object
             user.id = dbUser.id;
             return true;
           } else {
@@ -86,17 +82,9 @@ export const authConfig = {
           console.error("[AUTH] DB Error during sign in:", e);
         }
 
-        // HARDCODED BYPASS FOR DEBUGGING
-        // If the DB connection fails but we know it's the admin, let them in.
-        if (user.email.toLowerCase() === 'techuisict@gmail.com') {
-          console.log("[AUTH] Using hardcoded admin bypass for techuisict@gmail.com");
-          user.id = "techuisict-admin-bypass"; // Let them pass, though they might not have full DB profile loaded
-          return true;
-        }
       }
       
       console.error("[AUTH] Rejecting login, returning false.");
-      // If user is not in our database, reject the login
       return false; 
     },
     async jwt({ token, user }) {

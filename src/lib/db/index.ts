@@ -29,7 +29,14 @@ export async function withTenant<T>(
       sql`SELECT set_config('app.current_tenant', ${tenantId}, true)`
     );
     
-    // Execute the callback within the isolated transaction
-    return await callback(tx);
+    try {
+      // Execute the callback within the isolated transaction
+      return await callback(tx);
+    } finally {
+      // Explicitly reset the config to prevent connection pool leaks
+      await tx.execute(
+        sql`SELECT set_config('app.current_tenant', '', true)`
+      );
+    }
   });
 }

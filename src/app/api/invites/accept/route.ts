@@ -40,7 +40,11 @@ export async function GET(request: Request) {
 
     const userId = session.user.id;
 
-    // User is logged in. Check if already a member
+    if (!session.user.email || session.user.email.toLowerCase() !== invite.email.toLowerCase()) {
+      return NextResponse.json({ error: 'This invite was sent to a different email address. Please log in with the correct account.' }, { status: 403 });
+    }
+
+    // User is logged in and email matches. Check if already a member
     const existingMembership = await db.query.memberships.findFirst({
       where: and(
         eq(memberships.userId, userId),
