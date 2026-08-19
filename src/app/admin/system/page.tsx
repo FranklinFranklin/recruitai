@@ -24,16 +24,23 @@ export default async function SystemHealthPage() {
   const inngestStatus = true; // Assumed true if server is running, could be pinged in reality
   const storageStatus = true; // S3 bucket availability (mocked)
 
-  // 2. Fetch recent Threat & Audit Logs
-  const recentSecurityEvents = await db.select()
-    .from(securityEvents)
-    .orderBy(desc(securityEvents.createdAt))
-    .limit(10);
+  let recentSecurityEvents: any[] = [];
+  let recentAuditLogs: any[] = [];
 
-  const recentAuditLogs = await db.select()
-    .from(auditLogs)
-    .orderBy(desc(auditLogs.createdAt))
-    .limit(10);
+  try {
+    // Fetch actual security threats across all tenants
+    recentSecurityEvents = await db.select()
+      .from(securityEvents)
+      .orderBy(desc(securityEvents.createdAt))
+      .limit(10);
+
+    recentAuditLogs = await db.select()
+      .from(auditLogs)
+      .orderBy(desc(auditLogs.createdAt))
+      .limit(10);
+  } catch (e) {
+    console.error("Failed to load audit logs", e);
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
