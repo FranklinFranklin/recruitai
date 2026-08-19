@@ -150,12 +150,15 @@ export default function DemoPage() {
         
         {/* User Profile & Logout */}
         <div className="p-4 border-t border-slate-200 bg-slate-50 relative z-20">
-          <div className="flex items-center gap-3 px-2 mb-4 hover:bg-slate-200 p-2 -mx-2 rounded-xl cursor-pointer group transition-colors">
+          <div 
+            onClick={() => setView(view === 'MANAGER' ? 'RECRUITER' : 'MANAGER')}
+            className="flex items-center gap-3 px-2 mb-4 hover:bg-slate-200 p-2 -mx-2 rounded-xl cursor-pointer group transition-colors"
+          >
             <div className={`p-2 rounded-lg transition-colors duration-300 ${view === 'MANAGER' ? 'bg-indigo-100 text-indigo-600 group-hover:bg-indigo-200' : 'bg-emerald-100 text-emerald-600 group-hover:bg-emerald-200'}`}>
               {view === 'MANAGER' ? <Shield className="w-5 h-5" /> : <UserCircle className="w-5 h-5" />}
             </div>
             <div className="flex flex-col">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider group-hover:text-slate-500 transition-colors">My Profile</span>
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider group-hover:text-slate-500 transition-colors">Switch Profile</span>
               <span className="text-sm font-bold text-slate-700">
                 {view === 'MANAGER' ? 'Manager (Demo)' : 'Recruiter (Demo)'}
               </span>
@@ -182,6 +185,7 @@ export default function DemoPage() {
               setDemoState={setDemoState} 
               simulateIntake={simulateIntake} 
               parsedData={parsedData} 
+              setParsedData={setParsedData}
               isXRayMode={isXRayMode}
             />
           ) : (
@@ -202,12 +206,12 @@ export default function DemoPage() {
               In een live omgeving staat deze kandidaat nu perfect ingevuld in jullie ATS (zoals <strong>Bullhorn, Carerix of Recruitee</strong>), inclusief de AI-match score en motivatie. Geen handwerk meer.
             </p>
             <div className="flex flex-col gap-3">
-              <button 
-                onClick={() => { window.location.href = "mailto:sales@techuis.nl?subject=RecruitAI Demo Aanvraag"; }} 
+              <a 
+                href="mailto:sales@techuis.nl?subject=RecruitAI Demo Aanvraag"
                 className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 flex items-center justify-center gap-2"
               >
                 <Mail className="w-5 h-5" /> Test dit met jullie eigen ATS
-              </button>
+              </a>
               <button onClick={() => { setDemoState('IDLE'); setParsedData(null); }} className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-4 rounded-xl transition-all">
                 Demo Opnieuw Starten
               </button>
@@ -234,7 +238,7 @@ function SidebarLink({ icon, label, active = false, badge = null, onClick }: any
 }
 
 // --- RECRUITER VIEW COMPONENT ---
-function RecruiterView({ demoState, setDemoState, simulateIntake, parsedData, isXRayMode }: any) {
+function RecruiterView({ demoState, setDemoState, simulateIntake, parsedData, setParsedData, isXRayMode }: any) {
   return (
     <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 animate-in fade-in duration-500">
       
@@ -247,9 +251,11 @@ function RecruiterView({ demoState, setDemoState, simulateIntake, parsedData, is
 
         {/* Upload Box */}
         <XRayTooltip isVisible={isXRayMode} className="block w-full" text="Wanneer je hier een PDF in dropt, wordt deze veilig naar onze afgeschermde Inngest servers gestuurd. Dit voorkomt dat je eigen webserver ooit vastloopt door zware PDF bestanden.">
-          <div 
-            className={`border-2 border-dashed rounded-3xl p-12 text-center transition-all duration-500 relative overflow-hidden
-              ${demoState === 'IDLE' ? 'border-indigo-300 bg-indigo-50/50 hover:bg-indigo-50 cursor-pointer shadow-inner' : 'border-slate-200 bg-white opacity-50 pointer-events-none'}`}
+          <button 
+            type="button"
+            disabled={demoState !== 'IDLE'}
+            className={`w-full border-2 border-dashed rounded-3xl p-12 text-center transition-all duration-500 relative overflow-hidden focus:outline-none focus:ring-4 focus:ring-indigo-200
+              ${demoState === 'IDLE' ? 'border-indigo-300 bg-indigo-50/50 hover:bg-indigo-50 cursor-pointer shadow-inner' : 'border-slate-200 bg-white opacity-50 cursor-not-allowed'}`}
             onClick={simulateIntake}
           >
             {demoState === 'IDLE' ? (
@@ -266,7 +272,7 @@ function RecruiterView({ demoState, setDemoState, simulateIntake, parsedData, is
                 <p className="text-slate-500 font-medium">Document wordt verwerkt...</p>
               </div>
             )}
-          </div>
+          </button>
         </XRayTooltip>
 
         {/* Value Prop Banner */}
@@ -374,11 +380,17 @@ function RecruiterView({ demoState, setDemoState, simulateIntake, parsedData, is
 
                   {/* Action Buttons */}
                   <div className="pt-6 border-t flex gap-4 relative z-50">
-                    <button onClick={() => setDemoState('IDLE')} className="px-6 py-3 rounded-xl font-bold text-slate-600 bg-white border hover:bg-slate-50 transition-colors flex items-center gap-2 shadow-sm relative z-50 cursor-pointer pointer-events-auto">
+                    <button 
+                      onClick={() => { setDemoState('IDLE'); setParsedData(null); }} 
+                      className="px-6 py-3 rounded-xl font-bold text-slate-600 bg-white border hover:bg-slate-50 transition-colors flex items-center gap-2 shadow-sm relative z-50 cursor-pointer pointer-events-auto focus:outline-none focus:ring-4 focus:ring-slate-200"
+                    >
                       <XCircle className="w-5 h-5" /> Afwijzen
                     </button>
                     <XRayTooltip isVisible={isXRayMode} className="flex-1" text="Zodra je goedkeurt stuurt ons systeem dit direct via de API de poort uit naar Carerix/Bullhorn/Recruitee, en wist het direct de originele PDF.">
-                      <button onClick={() => setDemoState('CLIFFHANGER')} className="w-full px-6 py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2">
+                      <button 
+                        onClick={() => setDemoState('CLIFFHANGER')} 
+                        className="w-full px-6 py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 focus:outline-none focus:ring-4 focus:ring-indigo-300 pointer-events-auto"
+                      >
                         Goedkeuren & Exporteer <ChevronRight className="w-5 h-5" />
                       </button>
                     </XRayTooltip>
@@ -442,7 +454,10 @@ function ManagerView({ isXRayMode }: { isXRayMode: boolean }) {
           <div className="bg-white rounded-3xl p-8 border shadow-sm h-full flex flex-col">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold">Actieve Koppelingen</h3>
-              <button onClick={() => setSynced(true)} className="text-emerald-600 hover:text-white hover:bg-emerald-600 transition-colors text-sm font-bold bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full flex items-center gap-2">
+              <button 
+                onClick={() => setSynced(!synced)} 
+                className="text-emerald-600 hover:text-white hover:bg-emerald-600 transition-colors text-sm font-bold bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full flex items-center gap-2 focus:outline-none focus:ring-4 focus:ring-emerald-200 cursor-pointer pointer-events-auto"
+              >
                 <CheckCircle2 className="w-4 h-4"/> {synced ? 'Alles gesynchroniseerd!' : 'Gezond (Klik om te testen)'}
               </button>
             </div>
