@@ -1,8 +1,9 @@
-import { Building, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Building, ChevronLeft, ChevronRight } from 'lucide-react';
 import { db } from '@/lib/db';
 import { tenants } from '@/lib/db/schema';
 import { count } from 'drizzle-orm';
 import Link from 'next/link';
+import AddTenantModal from './AddTenantModal';
 
 export default async function TenantsPage({
   searchParams,
@@ -31,10 +32,7 @@ export default async function TenantsPage({
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Tenant Management</h2>
-        <button className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
-          <Plus className="w-4 h-4" />
-          New Tenant
-        </button>
+        <AddTenantModal />
       </div>
 
       <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
