@@ -6,21 +6,51 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:seed": "tsx src/lib/db/seed.ts",
+    "test:unit": "vitest run",
+    "test:e2e": "playwright test",
+    "test": "npm run test:unit && npm run test:e2e"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.111",
+    "@ai-sdk/google": "^3.0.110",
+    "@ai-sdk/openai": "^3.0.97",
+    "@arcjet/next": "^1.5.0",
+    "@supabase/supabase-js": "^2.109.0",
+    "ai": "^6.0.258",
+    "drizzle-orm": "^0.45.2",
+    "inngest": "^4.18.1",
+    "lucide-react": "^1.32.0",
     "next": "16.3.1",
+    "next-auth": "^5.0.0-beta.32",
+    "postgres": "^3.4.9",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "resend": "^6.20.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6.0.5",
+    "dotenv": "^17.4.2",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^9",
     "eslint-config-next": "16.3.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.6",
+    "jsdom": "^29.1.1",
+    "prettier": "^3.9.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "tsx": "^4.23.12",
+    "typescript": "^5",
+    "vitest": "^4.1.11"
   }
 }

@@ -1,69 +1,54 @@
-import Image from "next/image";
+import { auth } from "@/lib/auth/auth";
+import { redirect } from "next/navigation";
+import { db } from "@/lib/db";
+import { users } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
+import Link from "next/link";
+import { Workflow, ShieldCheck } from "lucide-react";
 
-export default function Home() {
+export default async function Home() {
+  const session = await auth();
+
+  // If the user is logged in, automatically route them to their correct portal
+  if (session?.user?.email) {
+    const [dbUser] = await db.select({ globalRole: users.globalRole })
+      .from(users)
+      .where(eq(users.email, session.user.email));
+      
+    if (dbUser && (dbUser.globalRole === 'SYSTEM_ADMIN' || dbUser.globalRole === 'SYSTEM_AUDITOR')) {
+      redirect('/admin');
+    } else {
+      redirect('/app');
+    }
+  }
+
+  // If not logged in, show a simple landing page
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+      <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center space-y-6">
+        <div className="mx-auto w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4">
+          <Workflow className="w-8 h-8" />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+        
+        <h1 className="text-3xl font-bold text-slate-900">RecruitAI</h1>
+        <p className="text-slate-600">
+          Veilig AI Recruitment Platform. Log in om toegang te krijgen tot jouw werkomgeving.
+        </p>
+
+        <div className="pt-6">
+          <Link 
+            href="/api/auth/signin" 
+            className="w-full inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            <ShieldCheck className="w-5 h-5" />
+            Inloggen bij RecruitAI
+          </Link>
         </div>
-      </main>
+
+        <p className="text-xs text-slate-400 mt-8">
+          Strictly Confidential & GDPR Compliant
+        </p>
+      </div>
     </div>
   );
 }
