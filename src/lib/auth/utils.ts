@@ -57,13 +57,22 @@ export async function requireTenantMember(requestedTenantId?: string) {
   const cookieStore = await cookies();
   const headersList = await headers();
   
-  const targetTenantId = requestedTenantId 
+  let finalTenantId = requestedTenantId 
     || headersList.get('x-tenant-id') 
     || cookieStore.get('x-active-tenant')?.value;
 
   try {
-    if (!targetTenantId) {
-      throw new Error('Tenant context missing. Security violation.');
+    if (!finalTenantId) {
+      // Secure fallback: if no cookie is set (e.g. first login), find their assigned tenant
+      const userMemberships = await db.select()
+        .from(memberships)
+        .where(eq(memberships.userId, session.user.id));
+        
+      if (userMemberships.length === 0) {
+         throw new Error('Unauthorized: User does not belong to any tenant.');
+      }
+      
+      finalTenantId = userMemberships[0].tenantId;
     }
 
     const userMemberships = await db.select()
@@ -71,7 +80,7 @@ export async function requireTenantMember(requestedTenantId?: string) {
       .where(
         and(
           eq(memberships.userId, session.user.id),
-          eq(memberships.tenantId, targetTenantId)
+          eq(memberships.tenantId, finalTenantId)
         )
       );
 
