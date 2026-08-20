@@ -31,12 +31,21 @@ function XRayTooltip({ children, text, isVisible, className = "" }: { children: 
   );
 }
 
+type NavItem = 'dashboard' | 'approvals' | 'upload' | 'candidates' | 'roi' | 'workflows' | 'settings' | 'team';
+
 export default function DemoPage() {
   const [view, setView] = useState<'RECRUITER' | 'MANAGER'>('RECRUITER');
+  const [activeNav, setActiveNav] = useState<NavItem>('upload');
   const [demoState, setDemoState] = useState<DemoState>('IDLE');
   const [isXRayMode, setIsXRayMode] = useState(false);
   
   const [parsedData, setParsedData] = useState<{ skills: string[]; matchedVacancy: string; score: number } | null>(null);
+
+  // Switch role via banner toggle — also reset activeNav to its sensible default
+  const switchView = (newView: 'RECRUITER' | 'MANAGER') => {
+    setView(newView);
+    setActiveNav(newView === 'RECRUITER' ? 'upload' : 'dashboard');
+  };
 
   // Keyboard shortcuts (Ctrl+D for reset, Alt for X-Ray Mode)
   useEffect(() => {
@@ -97,13 +106,13 @@ export default function DemoPage() {
         <div className="h-4 w-px bg-indigo-700"></div>
         <div className="flex bg-indigo-800 p-1 rounded-full">
           <button 
-            onClick={() => setView('RECRUITER')}
+            onClick={() => switchView('RECRUITER')}
             className={`px-3 py-1 rounded-full text-xs font-bold transition-all duration-300 ${view === 'RECRUITER' ? 'bg-white shadow-sm text-indigo-900' : 'text-indigo-200 hover:text-white'}`}
           >
             Recruiter
           </button>
           <button 
-            onClick={() => setView('MANAGER')}
+            onClick={() => switchView('MANAGER')}
             className={`px-3 py-1 rounded-full text-xs font-bold transition-all duration-300 ${view === 'MANAGER' ? 'bg-white shadow-sm text-indigo-900' : 'text-indigo-200 hover:text-white'}`}
           >
             Manager
@@ -129,20 +138,20 @@ export default function DemoPage() {
           </h1>
         </div>
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          <SidebarLink icon={<LayoutDashboard />} label="Dashboard" active={view === 'MANAGER'} onClick={() => setView('MANAGER')} />
-          <SidebarLink icon={<CheckSquare />} label="Approvals" badge={demoState === 'REVIEW' ? "1" : null} onClick={() => setView('RECRUITER')} />
-          <SidebarLink icon={<UploadCloud />} label="Upload CV" active={view === 'RECRUITER'} onClick={() => setView('RECRUITER')} />
-          <SidebarLink icon={<Users />} label="Candidates" onClick={() => setView('RECRUITER')} />
-          <SidebarLink icon={<BarChart />} label="ROI Reports" active={view === 'MANAGER'} onClick={() => setView('MANAGER')} />
-          <SidebarLink icon={<Workflow />} label="Workflows" onClick={() => setView('MANAGER')} />
+          <SidebarLink icon={<LayoutDashboard />} label="Dashboard" active={activeNav === 'dashboard'} onClick={() => setActiveNav('dashboard')} />
+          <SidebarLink icon={<CheckSquare />} label="Approvals" active={activeNav === 'approvals'} badge={demoState === 'REVIEW' ? "1" : null} onClick={() => setActiveNav('approvals')} />
+          <SidebarLink icon={<UploadCloud />} label="Upload CV" active={activeNav === 'upload'} onClick={() => setActiveNav('upload')} />
+          <SidebarLink icon={<Users />} label="Candidates" active={activeNav === 'candidates'} onClick={() => setActiveNav('candidates')} />
+          <SidebarLink icon={<BarChart />} label="ROI Reports" active={activeNav === 'roi'} onClick={() => setActiveNav('roi')} />
+          <SidebarLink icon={<Workflow />} label="Workflows" active={activeNav === 'workflows'} onClick={() => setActiveNav('workflows')} />
 
           {view === 'MANAGER' && (
             <div className="animate-in fade-in slide-in-from-top-2 duration-300">
               <div className="pt-4 pb-2">
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider px-2.5">Administration</p>
               </div>
-              <SidebarLink icon={<Settings />} label="Settings" onClick={() => setView('MANAGER')} />
-              <SidebarLink icon={<Users />} label="Team Monitor" onClick={() => setView('MANAGER')} />
+              <SidebarLink icon={<Settings />} label="Settings" active={activeNav === 'settings'} onClick={() => setActiveNav('settings')} />
+              <SidebarLink icon={<Users />} label="Team Monitor" active={activeNav === 'team'} onClick={() => setActiveNav('team')} />
             </div>
           )}
         </nav>
@@ -150,7 +159,7 @@ export default function DemoPage() {
         {/* User Profile & Logout */}
         <div className="p-4 border-t border-slate-200 bg-slate-50 relative z-20">
           <div 
-            onClick={() => setView(view === 'MANAGER' ? 'RECRUITER' : 'MANAGER')}
+            onClick={() => switchView(view === 'MANAGER' ? 'RECRUITER' : 'MANAGER')}
             className="flex items-center gap-3 px-2 mb-4 hover:bg-slate-200 p-2 -mx-2 rounded-xl cursor-pointer group transition-colors"
           >
             <div className={`p-2 rounded-lg transition-colors duration-300 ${view === 'MANAGER' ? 'bg-indigo-100 text-indigo-600 group-hover:bg-indigo-200' : 'bg-emerald-100 text-emerald-600 group-hover:bg-emerald-200'}`}>
