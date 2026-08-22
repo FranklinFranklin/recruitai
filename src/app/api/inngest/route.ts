@@ -1,3 +1,4 @@
+export const maxDuration = 60; // Increase Vercel timeout for AI tasks
 import { serve } from "inngest/next";
 import { inngest } from "@/lib/workflows/client";
 import { processCandidateIntake } from "@/lib/workflows/functions/candidate-intake";
