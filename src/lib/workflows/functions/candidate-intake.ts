@@ -195,6 +195,20 @@ ${JSON.stringify(structuredProfile)}
           workflow: "Candidate CV Intake Workflow",
           eventData: event?.data
         });
+        
+        // Mark candidate as REJECTED so it doesn't get stuck in PROCESSING forever
+        if (event?.data?.tenantId && event?.data?.candidateId) {
+          try {
+            await withTenant(event.data.tenantId, async (tx: any) => {
+              await tx.update(candidates).set({ 
+                status: 'REJECTED', 
+                matchReasoning: 'SYSTEM ERROR: ' + (e.message || String(e)) 
+              }).where(eq(candidates.id, event.data.candidateId));
+            });
+          } catch (updateErr) {
+            console.error("Failed to update candidate status to FAILED:", updateErr);
+          }
+        }
       });
       throw e;
     }
