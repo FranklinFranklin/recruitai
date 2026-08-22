@@ -105,9 +105,16 @@ export default async function CandidatesPage() {
                     </span>
                   )}
                   {candidate.status === 'REJECTED' && (
-                    <span className="inline-flex items-center gap-1 text-xs font-bold text-red-700 bg-red-100 px-2 py-1 rounded border border-red-200">
-                      <XCircle className="w-3 h-3" /> REJECTED
-                    </span>
+                    <div className="flex flex-col gap-1">
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-red-700 bg-red-100 px-2 py-1 rounded border border-red-200">
+                        <XCircle className="w-3 h-3" /> REJECTED
+                      </span>
+                      {candidate.matchReasoning && candidate.matchReasoning.startsWith('SYSTEM ERROR') && (
+                        <span className="text-[10px] text-red-600 max-w-[150px] truncate" title={candidate.matchReasoning}>
+                          {candidate.matchReasoning}
+                        </span>
+                      )}
+                    </div>
                   )}
                   {candidate.status === 'PROCESSING' && (
                     <span className="inline-flex items-center gap-1 text-xs font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded border border-slate-200 animate-pulse">
