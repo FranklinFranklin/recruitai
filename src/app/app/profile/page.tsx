@@ -17,16 +17,11 @@ export default async function ProfilePage() {
   const [dbUser] = await db.select().from(users).where(eq(users.id, user.id as string));
 
   // Fetch approval stats via Audit Logs
-  let todayCount = 0;
-  let monthCount = 0;
-  let totalCount = 0;
-
-  await withTenant(activeTenantId, async (tx) => {
+  const { todayCount, monthCount, totalCount } = await withTenant(activeTenantId, async (tx) => {
     // Total Approvals
     const totalRes = await tx.select({ count: sql<number>`count(*)::int` })
       .from(auditLogs)
       .where(and(eq(auditLogs.userId, user.id as string), eq(auditLogs.action, 'CANDIDATE_APPROVED')));
-    totalCount = totalRes[0].count;
 
     // Approvals this month
     const startOfMonth = new Date();
@@ -40,7 +35,6 @@ export default async function ProfilePage() {
         eq(auditLogs.action, 'CANDIDATE_APPROVED'),
         gte(auditLogs.createdAt, startOfMonth)
       ));
-    monthCount = monthRes[0].count;
 
     // Approvals today
     const startOfDay = new Date();
@@ -53,7 +47,12 @@ export default async function ProfilePage() {
         eq(auditLogs.action, 'CANDIDATE_APPROVED'),
         gte(auditLogs.createdAt, startOfDay)
       ));
-    todayCount = todayRes[0].count;
+      
+    return {
+      totalCount: totalRes[0].count,
+      monthCount: monthRes[0].count,
+      todayCount: todayRes[0].count
+    };
   });
 
   const stats = {

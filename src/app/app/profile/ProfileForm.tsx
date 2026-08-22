@@ -31,6 +31,7 @@ export default function ProfileForm({ user, role, stats, dict, initialLang }: { 
   // Initialize Dark Mode from localStorage on mount
   useEffect(() => {
     if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDarkMode(true);
       document.documentElement.classList.add('dark');
     }

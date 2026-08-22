@@ -12,17 +12,15 @@ export default async function ROIPage() {
   const { activeTenantId } = await requireTenantMember();
 
   // Fetch real data to mix with our historical visualization
-  let totalCandidates = 0;
-  let approvedCount = 0;
-  let rejectedCount = 0;
-
-  await withTenant(activeTenantId, async (tx) => {
+  const { totalCandidates, approvedCount, rejectedCount } = await withTenant(activeTenantId, async (tx) => {
     const total = await tx.select({ count: count() }).from(candidates);
     const approved = await tx.select({ count: count() }).from(candidates).where(eq(candidates.status, 'APPROVED'));
     const rejected = await tx.select({ count: count() }).from(candidates).where(eq(candidates.status, 'REJECTED'));
-    totalCandidates = total[0].count;
-    approvedCount = approved[0].count;
-    rejectedCount = rejected[0].count;
+    return {
+      totalCandidates: total[0].count,
+      approvedCount: approved[0].count,
+      rejectedCount: rejected[0].count
+    };
   });
 
   // Calculate actual facts from the database
