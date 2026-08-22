@@ -8,6 +8,7 @@ import { NonRetriableError } from 'inngest';
 import { db } from '@/lib/db';
 import { systemSettings } from '@/lib/db/schema';
 import crypto from 'crypto';
+import { TokenVault } from '@/lib/integrations/vault';
 
 interface AIGatewayRequest<T> {
   tenantId: string;
@@ -53,14 +54,31 @@ export async function executeAIRequest<T = any>(request: AIGatewayRequest<T>) {
   // For demo, we fall back to ENV vars if db token is missing
   let model: any;
   
+  // Fetch key from database vault
+  const vaultToken = await TokenVault.getTokens('SYSTEM_GLOBAL', providerType.toUpperCase());
+  let apiKey = vaultToken?.accessToken;
+  
+  if (!apiKey) {
+    if (providerType === 'anthropic') apiKey = process.env.ANTHROPIC_API_KEY;
+    else if (providerType === 'google') apiKey = process.env.GOOGLE_API_KEY;
+    else apiKey = process.env.OPENAI_API_KEY;
+  }
+  
+  if (!apiKey && process.env.NODE_ENV === 'production') {
+    throw new NonRetriableError(`AI API Key is missing for provider ${providerType}. Please configure it in the Admin Settings UI or via Vercel Environment Variables.`);
+  }
+
+  // Fallback to 'mock' if entirely missing so createOpenAI doesn't instantly throw in local dev
+  const finalKey = apiKey || 'mock';
+
   if (providerType === 'anthropic') {
-    const provider = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY || 'mock' });
+    const provider = createAnthropic({ apiKey: finalKey });
     model = provider('claude-3-5-sonnet-20240620');
   } else if (providerType === 'google') {
-    const provider = createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_API_KEY || 'mock' });
+    const provider = createGoogleGenerativeAI({ apiKey: finalKey });
     model = provider('gemini-1.5-pro-latest');
   } else {
-    const provider = createOpenAI({ apiKey: process.env.OPENAI_API_KEY || 'mock' });
+    const provider = createOpenAI({ apiKey: finalKey });
     model = provider('gpt-4o-2024-08-06'); // Strict structured outputs model
   }
 
