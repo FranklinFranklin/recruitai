@@ -7,10 +7,13 @@ import { inngest } from './client';
  * Inngest workflow that runs daily to anonymize old candidate data.
  * Purges PII from candidates exported more than 30 days ago.
  */
-export const anonymizeOldCandidates = (inngest.createFunction as any)(
-  { id: 'anonymize-old-candidates', name: 'GDPR: Anonymize Old Candidates' },
-  { cron: '0 2 * * *' }, // Run daily at 2 AM
-  async ({ step }: any) => {
+export const anonymizeOldCandidates = inngest.createFunction(
+  { 
+    id: 'anonymize-old-candidates', 
+    name: 'GDPR: Anonymize Old Candidates',
+    triggers: [{ cron: '0 2 * * *' }] 
+  },
+  async ({ step }) => {
     
     await step.run('anonymize-db-records', async () => {
       const thirtyDaysAgo = new Date();

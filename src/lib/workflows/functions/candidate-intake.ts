@@ -15,9 +15,9 @@ import { notifyRecruiter, notifyManager, notifyAdminError } from "@/lib/integrat
 export const processCandidateIntake = inngest.createFunction(
   { 
     id: "process-candidate-intake", 
-    name: "Candidate CV Intake Workflow"
+    name: "Candidate CV Intake Workflow",
+    triggers: [{ event: "recruitment/candidate.uploaded" }]
   },
-  { event: "recruitment/candidate.uploaded" },
   async ({ event, step }) => {
     try {
       const { tenantId, candidateId, documentUrl } = event.data;
