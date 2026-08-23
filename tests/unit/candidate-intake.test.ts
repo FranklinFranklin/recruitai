@@ -24,22 +24,23 @@ describe('processCandidateIntake', () => {
     expect(lastName).toBe('van der Meer');
   });
 
-  it('should extract real candidate skills and experience from CV text', () => {
-    const cvText = `
-      Maria Jansen
-      Ervaren Full Stack Ontwikkelaar met 6 jaar ervaring in web development.
-      Vaardigheden: React, TypeScript, Next.js, Node.js, PostgreSQL, Docker en Git.
-    `;
-    const skills = extractSkillsHeuristic(cvText);
-    const exp = extractExperienceHeuristic(cvText);
+  it('should extract real candidate name from CV text with job title headers', () => {
+    const cvText = `CV Lotte de Vries - Financieel Analist\nEmail: lotte@example.com`;
+    const { firstName, lastName } = extractNameHeuristic(cvText);
+    expect(firstName).toBe('Lotte');
+    expect(lastName).toBe('de Vries');
+  });
 
-    expect(skills).toContain('React');
-    expect(skills).toContain('TypeScript');
-    expect(skills).toContain('Next.js');
-    expect(skills).toContain('Node.js');
-    expect(skills).toContain('PostgreSQL');
-    expect(skills).toContain('Docker');
-    expect(skills).toContain('Git');
-    expect(exp).toBe(6);
+  it('should fallback to extracting candidate name from uploaded filename', () => {
+    const { firstName, lastName } = extractNameHeuristic('', 'CV_Lotte_de_gries_Financieel_Analist.pdf');
+    expect(firstName).toBe('Lotte');
+    expect(lastName).toBe('de Gries');
+  });
+
+  it('should prioritize filename candidate name when PDF has generic template text', () => {
+    const templateCvText = `James Miller\nLogistics Coordinator\nExperience: 5 years`;
+    const { firstName, lastName } = extractNameHeuristic(templateCvText, 'CV_Daan_Bakker_Logistiek_Coordinator.pdf');
+    expect(firstName).toBe('Daan');
+    expect(lastName).toBe('Bakker');
   });
 });

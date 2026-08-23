@@ -7,6 +7,8 @@ import { inngest } from './client';
 import { eq } from 'drizzle-orm';
 import { logAudit } from '@/lib/db/audit';
 
+import zlib from 'zlib';
+
 async function extractPdfText(buffer: Buffer): Promise<string> {
   // Strategy 1: Try PDFParse class instance
   try {
@@ -21,7 +23,34 @@ async function extractPdfText(buffer: Buffer): Promise<string> {
     console.warn("[PDF] PDFParse parser failed, attempting fallback extraction:", err);
   }
 
-  // Strategy 2: Direct text stream extraction (works in all serverless runtimes)
+  // Strategy 2: Decompress FlateDecode streams from PDF buffer
+  try {
+    const str = buffer.toString('binary');
+    const streamRegex = /stream[\r\n]+([\s\S]*?)[\r\n]+endstream/g;
+    let match: RegExpExecArray | null;
+    let decompressedText = '';
+
+    while ((match = streamRegex.exec(str)) !== null) {
+      const rawStream = Buffer.from(match[1], 'binary');
+      try {
+        const decompressed = zlib.inflateSync(rawStream).toString('latin1');
+        const textMatches = decompressed.match(/\(([^()]+)\)\s*Tj/g) || decompressed.match(/\[(.*?)\]\s*TJ/g);
+        if (textMatches) {
+          decompressedText += ' ' + textMatches.map(m => m.replace(/[()\[\]]/g, '').replace(/Tj|TJ/g, '').trim()).join(' ');
+        }
+      } catch {
+        // Not a standard flate stream, continue
+      }
+    }
+
+    if (decompressedText.trim().length > 0) {
+      return decompressedText.trim();
+    }
+  } catch (err) {
+    console.warn("[PDF] Flate decompress fallback failed:", err);
+  }
+
+  // Strategy 3: Direct text stream extraction
   try {
     const raw = buffer.toString('latin1');
     const matches = raw.match(/\(([^()]+)\)\s*Tj/g) || raw.match(/\[(.*?)\]\s*TJ/g);
@@ -35,7 +64,7 @@ async function extractPdfText(buffer: Buffer): Promise<string> {
       }
     }
 
-    // Strategy 3: Printable text extraction
+    // Strategy 4: Printable ASCII / Latin text extraction
     const printable = raw.replace(/[^\x20-\x7E\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim();
     if (printable.length > 50) {
       return printable;
@@ -44,7 +73,7 @@ async function extractPdfText(buffer: Buffer): Promise<string> {
     console.error("[PDF] Text stream fallback failed:", err);
   }
 
-  return "Candidate Profile / Resume document uploaded.";
+  return "";
 }
 
 import { extractCandidateProfile } from '@/lib/ai/cv-extractor';
@@ -67,7 +96,7 @@ export async function uploadCandidateCV(formData: FormData) {
   const buffer = Buffer.from(arrayBuffer);
   
   const rawText = await extractPdfText(buffer);
-  const profile = await extractCandidateProfile(rawText, activeTenantId);
+  const profile = await extractCandidateProfile(rawText, activeTenantId, file.name);
 
   // Store real PDF as data URL so the recruiter can preview and download the exact original document
   const base64Doc = buffer.toString('base64');

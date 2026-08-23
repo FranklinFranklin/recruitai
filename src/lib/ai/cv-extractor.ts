@@ -24,7 +24,8 @@ const COMMON_SKILLS = [
 
 export async function extractCandidateProfile(
   rawText: string,
-  tenantId: string
+  tenantId: string,
+  fileName?: string
 ): Promise<ExtractedCandidateProfile> {
   // 1. Try LLM Extraction via Gateway if available
   try {
@@ -33,8 +34,8 @@ export async function extractCandidateProfile(
       workflowId: 'candidate-intake',
       operation: 'EXTRACT_CV',
       dataClassification: 'PERSONAL_DATA',
-      systemPrompt: 'Extract the real candidate profile from the CV document text. Return their actual first name, last name, list of technical/professional skills found in the text, and total years of experience as an integer.',
-      prompt: `<cv_text>\n${rawText}\n</cv_text>`,
+      systemPrompt: 'Extract the real candidate profile from the CV document text. Return their actual first name, last name, list of technical/professional skills found in the text, and total years of experience as an integer. Do not use placeholder names like "Candidate", "Profile", or "John Doe".',
+      prompt: `<filename>${fileName || ''}</filename>\n<cv_text>\n${rawText}\n</cv_text>`,
       schema: z.object({
         firstName: z.string(),
         lastName: z.string(),
@@ -48,7 +49,8 @@ export async function extractCandidateProfile(
       aiResult.firstName && 
       aiResult.firstName !== 'Mock' && 
       aiResult.firstName !== 'John' &&
-      aiResult.firstName !== 'Processing...'
+      aiResult.firstName !== 'Processing...' &&
+      aiResult.firstName.toLowerCase() !== 'candidate'
     ) {
       const matching = await matchCandidateWithVacancies(aiResult, tenantId);
       return {
@@ -63,8 +65,8 @@ export async function extractCandidateProfile(
     console.warn('[CV Extractor] LLM extraction bypassed or failed, using heuristic extraction:', err);
   }
 
-  // 2. High-Accuracy Heuristic Extraction directly from document text
-  const { firstName, lastName } = extractNameHeuristic(rawText);
+  // 2. High-Accuracy Heuristic Extraction directly from document text & filename
+  const { firstName, lastName } = extractNameHeuristic(rawText, fileName);
   const skills = extractSkillsHeuristic(rawText);
   const yearsOfExperience = extractExperienceHeuristic(rawText);
   const matching = await matchCandidateWithVacancies({ firstName, lastName, skills, yearsOfExperience }, tenantId);
@@ -78,24 +80,90 @@ export async function extractCandidateProfile(
   };
 }
 
-export function extractNameHeuristic(text: string): { firstName: string; lastName: string } {
+export function extractNameFromFilename(filename: string): { firstName: string; lastName: string } | null {
+  if (!filename) return null;
+  
+  let clean = filename.replace(/\.pdf$/i, '');
+  clean = clean.replace(/[_.-]+/g, ' ').trim();
+  
+  const ignoreWords = new Set([
+    'cv', 'curriculum', 'vitae', 'resume', 'profile', 'profiel',
+    'financieel', 'financiele', 'financial', 'analyst', 'analist',
+    'software', 'engineer', 'developer', 'ontwikkelaar',
+    'senior', 'junior', 'medior', 'lead', 'manager', 'consultant',
+    'frontend', 'backend', 'fullstack', 'full', 'stack', 'document',
+    'logistiek', 'logistics', 'coordinator', 'coördinator',
+    'medewerker', 'specialist', 'adviseur', 'assistent', 'assistant',
+    'officer', 'planner', 'directeur', 'director', 'hoofd', 'head',
+    'hr', 'recruiter', 'recruitment', 'accountant', 'designer', 'architect',
+    'sales', 'marketing', 'operations', 'chauffeur', 'magazijn', 'magazijnmedewerker'
+  ]);
+  
+  const tokens = clean.split(/\s+/).filter(t => t.length > 0);
+  const nameTokens = tokens.filter(t => !ignoreWords.has(t.toLowerCase()));
+  
+  if (nameTokens.length >= 2) {
+    const formatted = nameTokens.map(w => {
+      const lower = w.toLowerCase();
+      if (['van', 'der', 'de', 'den', 'het', 'von', 'ten', 'ter', 'la', 'le', 'du'].includes(lower)) {
+        return lower;
+      }
+      return w.charAt(0).toUpperCase() + w.slice(1);
+    });
+    return {
+      firstName: formatted[0],
+      lastName: formatted.slice(1).join(' ')
+    };
+  } else if (nameTokens.length === 1) {
+    const name = nameTokens[0];
+    return {
+      firstName: name.charAt(0).toUpperCase() + name.slice(1),
+      lastName: ''
+    };
+  }
+  return null;
+}
+
+export function extractNameHeuristic(text: string, fileName?: string): { firstName: string; lastName: string } {
+  // If filename clearly specifies the candidate name (e.g. CV_Daan_Bakker_Logistiek_Coordinator.pdf),
+  // prioritize it to avoid sample / template placeholder names from PDF documents.
+  const fromFilename = fileName ? extractNameFromFilename(fileName) : null;
+  if (fromFilename && fromFilename.firstName && fromFilename.lastName) {
+    return fromFilename;
+  }
+
   if (!text || text.trim().length === 0) {
-    return { firstName: 'Candidate', lastName: 'Profile' };
+    return fromFilename || { firstName: 'Candidate', lastName: 'Profile' };
   }
 
   const lines = text
     .split(/\r?\n/)
     .map(line => line.trim())
-    .filter(line => line.length > 0 && line.length < 80);
+    .filter(line => line.length > 0 && line.length < 90);
 
-  const ignoredKeywords = [
-    'curriculum vitae', 'resume', 'cv', 'profile', 'profiel', 'contact',
-    'werkervaring', 'experience', 'opleiding', 'education', 'skills',
-    'vaardigheden', 'personalia', 'over mij', 'about me', 'email', 'telefoon',
-    'phone', 'address', 'adres', 'page', 'pagina', 'confidential', 'vertrouwelijk'
+  const genericPlaceholders = [
+    'candidate profile', 'resume document', 'profile / resume', 'uploaded document',
+    'john doe', 'jane doe', 'james miller', 'lorem ipsum'
   ];
 
-  for (const line of lines.slice(0, 10)) {
+  const ignoredKeywords = [
+    'contact', 'werkervaring', 'experience', 'opleiding', 'education', 'skills',
+    'vaardigheden', 'personalia', 'over mij', 'about me', 'email', 'telefoon',
+    'phone', 'address', 'adres', 'page', 'pagina', 'confidential', 'vertrouwelijk',
+    'samenvatting', 'summary', 'referenties', 'references', 'certificaten'
+  ];
+
+  for (const rawLine of lines.slice(0, 15)) {
+    const lowerRaw = rawLine.toLowerCase();
+    if (genericPlaceholders.some(gp => lowerRaw.includes(gp))) {
+      continue;
+    }
+
+    let line = rawLine.replace(/^(?:curriculum vitae|cv|resume|profiel|profile)\s*[:\-–—\s]*/i, '').trim();
+    if (line.includes(' - ')) line = line.split(' - ')[0].trim();
+    if (line.includes(' – ')) line = line.split(' – ')[0].trim();
+    if (line.includes(' | ')) line = line.split(' | ')[0].trim();
+
     const lower = line.toLowerCase();
     if (ignoredKeywords.some(kw => lower === kw || lower.startsWith(kw + ':') || lower.startsWith(kw + ' -'))) {
       continue;
@@ -109,15 +177,25 @@ export function extractNameHeuristic(text: string): { firstName: string; lastNam
     if (words.length >= 2 && words.length <= 4) {
       const firstName = words[0];
       const lastName = words.slice(1).join(' ');
-      return { firstName, lastName };
+      if (
+        firstName.toLowerCase() !== 'candidate' && 
+        firstName.toLowerCase() !== 'curriculum' &&
+        !genericPlaceholders.some(gp => (firstName + ' ' + lastName).toLowerCase().includes(gp))
+      ) {
+        return { firstName, lastName };
+      }
     }
   }
 
-  // Fallback to first non-empty word sequence if no 2-word line matched
-  for (const line of lines.slice(0, 5)) {
-    const cleaned = line.replace(/[^A-Za-zÀ-ÿ\s]/g, '').trim();
+  // Fallback to filename or first valid token sequence
+  if (fromFilename) {
+    return fromFilename;
+  }
+
+  for (const rawLine of lines.slice(0, 5)) {
+    const cleaned = rawLine.replace(/[^A-Za-zÀ-ÿ\s]/g, '').trim();
     const parts = cleaned.split(/\s+/).filter(Boolean);
-    if (parts.length >= 2) {
+    if (parts.length >= 2 && parts[0].toLowerCase() !== 'candidate') {
       return { firstName: parts[0], lastName: parts.slice(1).join(' ') };
     }
   }
