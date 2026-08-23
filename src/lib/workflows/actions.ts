@@ -99,7 +99,7 @@ export async function uploadCandidateCV(formData: FormData) {
       data: {
         tenantId: activeTenantId,
         candidateId: newCandidate.id,
-        documentUrl: secureDocumentUrl,
+        documentUrl: documentUrl,
         rawText: rawText,
       }
     });
