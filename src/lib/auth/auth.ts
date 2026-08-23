@@ -110,11 +110,7 @@ export const authConfig = {
       return session;
     },
     async redirect({ url, baseUrl }) {
-      // If the redirect URL is the signin page itself, send to root '/' so role routing happens
-      if (url.includes('/api/auth/signin')) {
-        return baseUrl;
-      }
-      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      if (url.startsWith('/')) return `${baseUrl}${url}`;
       try {
         if (new URL(url).origin === baseUrl) return url;
       } catch {

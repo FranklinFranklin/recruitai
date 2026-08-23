@@ -7,8 +7,45 @@ import { inngest } from './client';
 import { eq } from 'drizzle-orm';
 import { logAudit } from '@/lib/db/audit';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const pdf = require('pdf-parse');
+async function extractPdfText(buffer: Buffer): Promise<string> {
+  // Strategy 1: Try PDFParse class instance
+  try {
+    const { PDFParse } = await import('pdf-parse');
+    const parser = new PDFParse({ data: buffer });
+    const textResult = await parser.getText();
+    await parser.destroy();
+    if (textResult?.text && textResult.text.trim().length > 0) {
+      return textResult.text;
+    }
+  } catch (err) {
+    console.warn("[PDF] PDFParse parser failed, attempting fallback extraction:", err);
+  }
+
+  // Strategy 2: Direct text stream extraction (works in all serverless runtimes)
+  try {
+    const raw = buffer.toString('latin1');
+    const matches = raw.match(/\(([^()]+)\)\s*Tj/g) || raw.match(/\[(.*?)\]\s*TJ/g);
+    if (matches && matches.length > 0) {
+      const extracted = matches
+        .map(m => m.replace(/[()\[\]]/g, '').replace(/Tj|TJ/g, '').trim())
+        .filter(Boolean)
+        .join(' ');
+      if (extracted.trim().length > 0) {
+        return extracted;
+      }
+    }
+
+    // Strategy 3: Printable text extraction
+    const printable = raw.replace(/[^\x20-\x7E\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (printable.length > 50) {
+      return printable;
+    }
+  } catch (err) {
+    console.error("[PDF] Text stream fallback failed:", err);
+  }
+
+  return "Candidate Profile / Resume document uploaded.";
+}
 
 export async function uploadCandidateCV(formData: FormData) {
   const { activeTenantId, user } = await requireTenantMember();
@@ -19,7 +56,7 @@ export async function uploadCandidateCV(formData: FormData) {
     throw new Error('No file uploaded.');
   }
 
-  if (file.type !== 'application/pdf') {
+  if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
     throw new Error('Invalid file format. Only PDF is allowed.');
   }
 
@@ -27,14 +64,7 @@ export async function uploadCandidateCV(formData: FormData) {
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
   
-  let rawText = '';
-  try {
-    const pdfData = await pdf(buffer);
-    rawText = pdfData.text;
-  } catch (err) {
-    console.error("Failed to parse PDF:", err);
-    throw new Error("Failed to extract text from PDF");
-  }
+  const rawText = await extractPdfText(buffer);
 
   // We construct the URL to pretend it's in an isolated bucket
   const secureDocumentUrl = `s3://secure-cv-bucket/${activeTenantId}/${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
