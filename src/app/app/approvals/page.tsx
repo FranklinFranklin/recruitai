@@ -14,7 +14,12 @@ export default async function ApprovalsPage() {
   const dict = fullDict.approvals;
 
   const pendingCandidates = await withTenant(activeTenantId, async (tx) => {
-    return await tx.select().from(candidates).where(eq(candidates.status, 'PENDING_APPROVAL'));
+    const raw = await tx.select().from(candidates).where(eq(candidates.status, 'PENDING_APPROVAL'));
+    return raw.map((c: any) => ({
+      ...c,
+      skills: Array.isArray(c.skills) ? c.skills : (typeof c.skills === 'string' ? JSON.parse(c.skills || '[]') : []),
+      createdAt: c.createdAt ? c.createdAt.toISOString() : null,
+    }));
   });
 
   if (pendingCandidates.length === 0) {

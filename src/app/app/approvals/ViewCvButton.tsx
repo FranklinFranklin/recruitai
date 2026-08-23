@@ -35,21 +35,26 @@ export default function ViewCvButton({ url, candidateName }: { url: string; cand
     }
   }, [url]);
 
-  const isPdf = !!blobUrl;
+  const isPdf = Boolean(blobUrl || url);
 
   const handleDownload = () => {
     if (!blobUrl && !url) return;
+    const downloadUrl = blobUrl || url;
     const a = document.createElement('a');
-    a.href = blobUrl || url;
-    a.download = `${(candidateName || 'Candidate_CV').replace(/\s+/g, '_')}.pdf`;
+    a.href = downloadUrl;
+    a.download = `${(candidateName || 'Candidate_CV').replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
+    setTimeout(() => {
+      if (document.body.contains(a)) {
+        document.body.removeChild(a);
+      }
+    }, 100);
   };
 
   const handleOpenNewTab = () => {
     if (blobUrl) {
-      window.open(blobUrl, '_blank');
+      window.open(blobUrl, '_blank', 'noopener,noreferrer');
     }
   };
 
