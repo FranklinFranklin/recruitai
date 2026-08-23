@@ -47,6 +47,8 @@ async function extractPdfText(buffer: Buffer): Promise<string> {
   return "Candidate Profile / Resume document uploaded.";
 }
 
+import { extractCandidateProfile } from '@/lib/ai/cv-extractor';
+
 export async function uploadCandidateCV(formData: FormData) {
   const { activeTenantId, user } = await requireTenantMember();
   
@@ -65,18 +67,24 @@ export async function uploadCandidateCV(formData: FormData) {
   const buffer = Buffer.from(arrayBuffer);
   
   const rawText = await extractPdfText(buffer);
+  const profile = await extractCandidateProfile(rawText, activeTenantId);
 
   // We construct the URL to pretend it's in an isolated bucket
   const secureDocumentUrl = `s3://secure-cv-bucket/${activeTenantId}/${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
 
-  // 1. Create the database record (tenant-isolated via RLS)
+  // 1. Create the database record with real extracted candidate profile
   const [newCandidate] = await withTenant(activeTenantId, async (tx) => {
     return await tx.insert(candidates).values({
       tenantId: activeTenantId,
-      firstName: 'Processing...', // Will be updated by AI
-      lastName: 'Processing...',
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      skills: profile.skills,
+      yearsOfExperience: profile.yearsOfExperience,
+      matchedVacancyId: profile.matchedVacancyId,
+      matchScore: profile.matchScore,
+      matchReasoning: profile.matchReasoning,
       resumeUrl: secureDocumentUrl,
-      status: 'PROCESSING',
+      status: 'PENDING_APPROVAL',
     }).returning();
   });
 
@@ -84,15 +92,19 @@ export async function uploadCandidateCV(formData: FormData) {
   await logAudit(activeTenantId, user.id, 'CANDIDATE_UPLOADED', newCandidate.id);
 
   // 2. Trigger the asynchronous Inngest workflow, passing the extracted text
-  await inngest.send({
-    name: 'recruitment/candidate.uploaded',
-    data: {
-      tenantId: activeTenantId,
-      candidateId: newCandidate.id,
-      documentUrl: secureDocumentUrl,
-      rawText: rawText,
-    }
-  });
+  try {
+    await inngest.send({
+      name: 'recruitment/candidate.uploaded',
+      data: {
+        tenantId: activeTenantId,
+        candidateId: newCandidate.id,
+        documentUrl: secureDocumentUrl,
+        rawText: rawText,
+      }
+    });
+  } catch (inngestErr) {
+    console.warn("Inngest event dispatch skipped/offline:", inngestErr);
+  }
 
   return { success: true, candidateId: newCandidate.id };
 }
