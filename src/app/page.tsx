@@ -49,7 +49,7 @@ export default async function Home() {
 
         <div className="pt-6">
           <Link 
-            href="/api/auth/signin" 
+            href="/api/auth/signin?callbackUrl=/" 
             className="w-full inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
           >
             <ShieldCheck className="w-5 h-5" />

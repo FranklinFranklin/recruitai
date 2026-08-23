@@ -106,7 +106,7 @@ export default async function AppLayout({
           <div className="space-y-2">
             <form action={async () => {
               'use server';
-              await signOut({ redirectTo: '/api/auth/signin' });
+              await signOut({ redirectTo: '/api/auth/signin?callbackUrl=/' });
             }}>
               <button type="submit" className="flex w-full justify-center items-center gap-2 p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg transition-all font-medium shadow-sm text-sm">
                 <ArrowLeftRight className="w-4 h-4" />
