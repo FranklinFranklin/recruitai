@@ -1,29 +1,63 @@
 'use client';
 
-import { useState } from 'react';
-import { FileText, X, Download } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { FileText, X, Download, ExternalLink } from 'lucide-react';
 
 export default function ViewCvButton({ url, candidateName }: { url: string; candidateName?: string }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
 
-  const isDataUri = url?.startsWith('data:application/pdf') || url?.startsWith('data:');
-  const isHttpUrl = url?.startsWith('http://') || url?.startsWith('https://') || url?.startsWith('/api/');
+  useEffect(() => {
+    if (!url) return;
+
+    if (url.startsWith('data:application/pdf;base64,')) {
+      try {
+        const base64Data = url.replace('data:application/pdf;base64,', '');
+        const byteCharacters = atob(base64Data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/pdf' });
+        const objectUrl = URL.createObjectURL(blob);
+        setBlobUrl(objectUrl);
+
+        return () => {
+          URL.revokeObjectURL(objectUrl);
+        };
+      } catch (e) {
+        console.error('Failed to parse base64 PDF data:', e);
+        setBlobUrl(url);
+      }
+    } else {
+      setBlobUrl(url);
+    }
+  }, [url]);
+
+  const isPdf = !!blobUrl;
 
   const handleDownload = () => {
-    if (!url) return;
+    if (!blobUrl && !url) return;
     const a = document.createElement('a');
-    a.href = url;
+    a.href = blobUrl || url;
     a.download = `${(candidateName || 'Candidate_CV').replace(/\s+/g, '_')}.pdf`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
   };
 
+  const handleOpenNewTab = () => {
+    if (blobUrl) {
+      window.open(blobUrl, '_blank');
+    }
+  };
+
   return (
     <>
       <button 
         onClick={() => setIsOpen(true)}
-        className="text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 text-sm font-medium transition-colors"
+        className="text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 text-sm font-medium transition-colors cursor-pointer"
       >
         <FileText className="w-3.5 h-3.5" />
         View Original CV
@@ -47,17 +81,25 @@ export default function ViewCvButton({ url, candidateName }: { url: string; cand
               </div>
 
               <div className="flex items-center gap-2">
-                {(isDataUri || isHttpUrl) && (
-                  <button 
-                    onClick={handleDownload}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg transition-colors shadow-sm"
-                  >
-                    <Download className="w-3.5 h-3.5" /> Download PDF
-                  </button>
+                {isPdf && (
+                  <>
+                    <button 
+                      onClick={handleOpenNewTab}
+                      className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg transition-colors shadow-sm"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" /> Open Tab
+                    </button>
+                    <button 
+                      onClick={handleDownload}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm"
+                    >
+                      <Download className="w-3.5 h-3.5" /> Download PDF
+                    </button>
+                  </>
                 )}
                 <button 
                   onClick={() => setIsOpen(false)}
-                  className="p-1.5 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white rounded-lg transition-colors border border-slate-200 dark:border-slate-700"
+                  className="p-1.5 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white rounded-lg transition-colors border border-slate-200 dark:border-slate-700 cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -66,12 +108,18 @@ export default function ViewCvButton({ url, candidateName }: { url: string; cand
             
             {/* PDF Viewer */}
             <div className="flex-1 w-full h-full bg-slate-100 dark:bg-slate-950 p-2 md:p-4 overflow-hidden flex items-center justify-center">
-              {isDataUri || isHttpUrl ? (
-                <iframe 
-                  src={`${url}#view=FitH`} 
-                  className="w-full h-full border-0 rounded-xl bg-white shadow-sm"
-                  title="Candidate CV Document"
-                />
+              {blobUrl ? (
+                <object 
+                  data={`${blobUrl}#view=FitH`} 
+                  type="application/pdf"
+                  className="w-full h-full rounded-xl bg-white shadow-sm"
+                >
+                  <iframe 
+                    src={`${blobUrl}#view=FitH`} 
+                    className="w-full h-full border-0 rounded-xl bg-white shadow-sm"
+                    title="Candidate CV Document"
+                  />
+                </object>
               ) : (
                 <div className="bg-white dark:bg-slate-800 p-8 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 max-w-md text-center flex flex-col items-center gap-4">
                   <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/30 rounded-full flex items-center justify-center">

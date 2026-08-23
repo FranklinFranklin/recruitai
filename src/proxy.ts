@@ -5,20 +5,20 @@ export async function proxy(request: NextRequest) {
   const response = NextResponse.next();
 
   // 1. Strict Security Headers
-  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('X-Frame-Options', 'SAMEORIGIN');
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   
   // Content Security Policy (CSP)
-  // Only allow scripts from our own domain.
-  // In production with Vercel Analytics/Inngest, you'd whitelist specific domains here.
   const csp = `
     default-src 'self';
     script-src 'self' 'unsafe-eval' 'unsafe-inline';
     style-src 'self' 'unsafe-inline';
-    img-src 'self' data: https:;
+    img-src 'self' data: blob: https:;
     font-src 'self' data:;
     connect-src 'self' https:;
+    frame-src 'self' data: blob: https:;
+    object-src 'self' data: blob:;
   `.replace(/\s{2,}/g, ' ').trim();
   
   response.headers.set('Content-Security-Policy', csp);
