@@ -203,7 +203,7 @@ export default function ApprovalButtons({ candidate, dict }: { candidate: any, d
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Total Experience (Years)</label>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Experience (Years)</label>
                   <input 
                     type="number" 
                     min="0"

@@ -114,13 +114,10 @@ export default async function ApprovalsPage() {
                     </span>
                   ))}
                 </div>
-                <div className="mt-2 text-sm text-slate-600 dark:text-slate-400 space-y-1">
-                  <p>Total Identified Experience: <strong className="dark:text-white">{candidate.yearsOfExperience || 'Unknown'} years</strong></p>
-                  {candidate.lastJobDuration && (
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Experience in Last Job: <strong className="text-slate-800 dark:text-slate-200 font-semibold">{candidate.lastJobDuration}</strong>
-                    </p>
-                  )}
+                <div className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                  <p>
+                    Identified Experience: <strong className="dark:text-white font-semibold">{candidate.lastJobDuration || `${candidate.yearsOfExperience || 3} years`}</strong>
+                  </p>
                 </div>
               </div>
             </div>
