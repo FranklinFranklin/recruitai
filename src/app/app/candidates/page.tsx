@@ -15,7 +15,13 @@ export default async function CandidatesPage() {
 
   // Securely query candidates only for this tenant using RLS
   const allCandidates = await withTenant(activeTenantId, async (tx) => {
-    return await tx.select().from(candidates).orderBy(desc(candidates.createdAt));
+    const raw = await tx.select().from(candidates).orderBy(desc(candidates.createdAt));
+    return raw.map((c: any) => ({
+      ...c,
+      createdAt: c.createdAt ? c.createdAt.toISOString() : null,
+      resumeUrl: c.resumeUrl || null,
+      skills: Array.isArray(c.skills) ? c.skills : [],
+    }));
   });
 
   if (allCandidates.length === 0) {

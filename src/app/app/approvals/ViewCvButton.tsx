@@ -3,12 +3,15 @@
 import { useState, useEffect } from 'react';
 import { FileText, X, Download, ExternalLink } from 'lucide-react';
 
-export default function ViewCvButton({ url, candidateName }: { url: string; candidateName?: string }) {
+export default function ViewCvButton({ url, candidateName }: { url?: string | null; candidateName?: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!url) return;
+    if (!url) {
+      setBlobUrl(null);
+      return;
+    }
 
     if (url.startsWith('data:application/pdf;base64,')) {
       try {
@@ -40,6 +43,7 @@ export default function ViewCvButton({ url, candidateName }: { url: string; cand
   const handleDownload = () => {
     if (!blobUrl && !url) return;
     const downloadUrl = blobUrl || url;
+    if (!downloadUrl) return;
     const a = document.createElement('a');
     a.href = downloadUrl;
     a.download = `${(candidateName || 'Candidate_CV').replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
@@ -57,6 +61,14 @@ export default function ViewCvButton({ url, candidateName }: { url: string; cand
       window.open(blobUrl, '_blank', 'noopener,noreferrer');
     }
   };
+
+  if (!url) {
+    return (
+      <span className="text-slate-400 dark:text-slate-500 inline-flex items-center gap-1 text-xs italic">
+        <FileText className="w-3.5 h-3.5 opacity-60" /> No document
+      </span>
+    );
+  }
 
   return (
     <>
