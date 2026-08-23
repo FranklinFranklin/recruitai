@@ -63,4 +63,22 @@ describe('processCandidateIntake', () => {
     const duration = extractLastJobDuration(cvText);
     expect(duration).toContain('2021 - Present');
   });
+
+  it('should reject phone and contact numbers from being extracted as job titles', () => {
+    const cvWithContact = `
+      Franklin Santos
+      Telefoon: 06 - 27257712  E-mail: franklin@example.com
+      Logistics Coordinator
+      Werkervaring: 2021 - heden
+    `;
+    const title = extractJobTitle(cvWithContact);
+    expect(title).not.toContain('27257712');
+    expect(title).toBe('Logistics Coordinator');
+  });
+
+  it('should strip 4-digit years from candidate names in filenames', () => {
+    const { firstName, lastName } = extractNameHeuristic('', 'CV_Franklin_Santos_2025.pdf');
+    expect(firstName).toBe('Franklin');
+    expect(lastName).toBe('Santos');
+  });
 });

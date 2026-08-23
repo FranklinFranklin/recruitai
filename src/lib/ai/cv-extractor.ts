@@ -125,7 +125,12 @@ export function extractNameFromFilename(filename: string): { firstName: string; 
   ]);
   
   const tokens = clean.split(/\s+/).filter(t => t.length > 0);
-  const nameTokens = tokens.filter(t => !ignoreWords.has(t.toLowerCase()));
+  const nameTokens = tokens.filter(t => {
+    const lower = t.toLowerCase();
+    // Filter out 4-digit years (e.g. 2024, 2025), version markers, and ignore words
+    if (/^(?:19|20)\d{2}$/.test(t) || /^v\d+$/i.test(t) || /^\d+$/.test(t)) return false;
+    return !ignoreWords.has(lower);
+  });
   
   if (nameTokens.length >= 2) {
     const formatted = nameTokens.map(w => {
@@ -340,6 +345,38 @@ async function matchCandidateWithVacancies(
   }
 }
 
+export function isValidJobTitle(title?: string | null): boolean {
+  if (!title || typeof title !== 'string') return false;
+  const clean = title.trim();
+  if (clean.length < 3 || clean.length > 55) return false;
+  
+  // Reject numbers/phone digits (cannot have 2 or more digits)
+  if (/\d{2,}/.test(clean)) return false;
+  
+  // Reject contact headers, postal/address terms, date ranges, and section metadata
+  const contactKeywords = [
+    'email', 'e-mail', 'tel', 'telefoon', 'mobiel', 'mobile', 'phone',
+    'kvk', 'linkedin', 'github', 'adres', 'address', 'postcode',
+    'woonplaats', 'geboortedatum', 'rijbewijs', 'nationaliteit',
+    'curriculum', 'resume', 'pagina', 'page', 'contact', 'personalia',
+    'opleiding', 'education', 'referentie', 'referenties', 'competenties',
+    'heden', 'present', 'current', 'now', 'nu', 'werkervaring', 'ervaring',
+    'experience', 'vaardigheden', 'talen', 'languages', 'januari', 'februari',
+    'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september',
+    'oktober', 'november', 'december'
+  ];
+  const lower = clean.toLowerCase();
+  if (contactKeywords.some(kw => lower === kw || lower.startsWith(kw + ':') || lower.startsWith(kw + ' -') || lower === kw || (kw.length > 4 && lower.includes(kw)))) {
+    return false;
+  }
+  
+  // Must consist of letters/words (minimum 3 alphabetical chars)
+  const lettersOnly = clean.replace(/[^a-zA-ZÀ-ÿ\s-]/g, '').trim();
+  if (lettersOnly.length < 3) return false;
+
+  return true;
+}
+
 export function extractJobTitle(text: string, fileName?: string): string {
   // 1. Check filename first
   if (fileName) {
@@ -347,13 +384,15 @@ export function extractJobTitle(text: string, fileName?: string): string {
     clean = clean.replace(/[_.-]+/g, ' ').trim();
     const titleKeywords = [
       'logistiek coordinator', 'logistiek coördinator', 'logistics coordinator',
+      'logistiek medewerker', 'logistics worker', 'magazijnmedewerker', 'warehouse worker',
       'financieel analist', 'financieel adviseur', 'financial analyst',
       'software engineer', 'software developer', 'frontend developer', 'backend developer',
       'fullstack developer', 'full stack developer', 'devops engineer', 'system administrator',
       'data engineer', 'data scientist', 'data analist', 'data analyst',
       'project manager', 'product manager', 'scrum master', 'recruiter', 'hr advisor',
-      'accountant', 'controller', 'magazijnmedewerker', 'operations manager',
-      'account manager', 'sales manager', 'supply chain manager'
+      'accountant', 'controller', 'operations manager', 'warehouse supervisor',
+      'account manager', 'sales manager', 'supply chain manager', 'supply chain specialist',
+      'inkoper', 'procurement specialist', 'chauffeur', 'planner'
     ];
     for (const kw of titleKeywords) {
       if (clean.toLowerCase().includes(kw)) {
@@ -362,25 +401,45 @@ export function extractJobTitle(text: string, fileName?: string): string {
     }
   }
 
-  // 2. Check document text header lines
+  // 2. Check document text header lines with separator (e.g. "Franklin Santos - Logistics Coordinator")
   const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean).slice(0, 15);
   for (const line of lines) {
     if (line.includes(' - ')) {
       const part = line.split(' - ')[1].trim();
-      if (part.length > 3 && part.length < 50 && !part.includes('@')) return part;
+      if (isValidJobTitle(part)) return part;
+    }
+    if (line.includes(' – ')) {
+      const part = line.split(' – ')[1].trim();
+      if (isValidJobTitle(part)) return part;
     }
     if (line.includes(' | ')) {
       const part = line.split(' | ')[1].trim();
-      if (part.length > 3 && part.length < 50 && !part.includes('@')) return part;
+      if (isValidJobTitle(part)) return part;
     }
   }
 
-  // 3. Scan for common job titles in text
+  // 3. Check standalone header lines (e.g. line right beneath the candidate name)
+  for (const line of lines.slice(1, 6)) {
+    if (isValidJobTitle(line)) {
+      // Must not be a date range or pure location
+      if (!/(?:19|20)\d{2}/.test(line) && !/^(?:amsterdam|rotterdam|utrecht|den haag|eindhoven|nederland|netherlands)$/i.test(line)) {
+        const words = line.split(/\s+/);
+        if (words.length >= 1 && words.length <= 4) {
+          return line;
+        }
+      }
+    }
+  }
+
+  // 4. Scan for common job titles across the entire CV text
   const commonRoles = [
-    'Logistics Coordinator', 'Logistiek Coördinator', 'Financial Analyst', 'Financieel Analist',
+    'Logistics Coordinator', 'Logistiek Coördinator', 'Logistiek Medewerker', 'Magazijnmedewerker',
+    'Financial Analyst', 'Financieel Analist', 'Financieel Adviseur', 'Accountant', 'Controller',
     'Software Engineer', 'Full Stack Developer', 'Frontend Developer', 'Backend Developer',
-    'DevOps Engineer', 'Project Manager', 'Product Manager', 'Data Analyst', 'Accountant',
-    'Supply Chain Specialist', 'Operations Coordinator', 'HR Manager', 'Recruiter'
+    'DevOps Engineer', 'System Administrator', 'Data Engineer', 'Data Scientist', 'Data Analyst',
+    'Project Manager', 'Product Manager', 'Scrum Master', 'Operations Manager', 'Warehouse Supervisor',
+    'Supply Chain Specialist', 'Supply Chain Manager', 'Operations Coordinator', 'HR Manager', 'Recruiter',
+    'Account Manager', 'Sales Manager', 'Customer Service Representative', 'Klantenservice Medewerker'
   ];
   for (const role of commonRoles) {
     const regex = new RegExp(`\\b${role.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
