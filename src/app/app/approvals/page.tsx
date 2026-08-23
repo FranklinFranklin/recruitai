@@ -70,7 +70,7 @@ export default async function ApprovalsPage() {
               {/* Status & "What happened?" */}
               <div>
                 <h3 className="text-xl font-bold text-slate-900 dark:text-white">{candidate.firstName} {candidate.lastName}</h3>
-                <ViewCvButton url={candidate.resumeUrl!} />
+                <ViewCvButton url={candidate.resumeUrl!} candidateName={`${candidate.firstName} ${candidate.lastName}`} />
               </div>
 
               {/* "What needs my attention?" */}

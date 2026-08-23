@@ -123,7 +123,7 @@ export default async function CandidatesPage() {
                   )}
                 </td>
                 <td className="p-4 text-right">
-                  <ViewCvButton url={candidate.resumeUrl!} />
+                  <ViewCvButton url={candidate.resumeUrl!} candidateName={`${candidate.firstName} ${candidate.lastName}`} />
                 </td>
               </tr>
             ))}

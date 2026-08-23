@@ -69,10 +69,11 @@ export async function uploadCandidateCV(formData: FormData) {
   const rawText = await extractPdfText(buffer);
   const profile = await extractCandidateProfile(rawText, activeTenantId);
 
-  // We construct the URL to pretend it's in an isolated bucket
-  const secureDocumentUrl = `s3://secure-cv-bucket/${activeTenantId}/${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+  // Store real PDF as data URL so the recruiter can preview and download the exact original document
+  const base64Doc = buffer.toString('base64');
+  const documentUrl = `data:application/pdf;base64,${base64Doc}`;
 
-  // 1. Create the database record with real extracted candidate profile
+  // 1. Create the database record with real extracted candidate profile and document preview
   const [newCandidate] = await withTenant(activeTenantId, async (tx) => {
     return await tx.insert(candidates).values({
       tenantId: activeTenantId,
@@ -83,7 +84,7 @@ export async function uploadCandidateCV(formData: FormData) {
       matchedVacancyId: profile.matchedVacancyId,
       matchScore: profile.matchScore,
       matchReasoning: profile.matchReasoning,
-      resumeUrl: secureDocumentUrl,
+      resumeUrl: documentUrl,
       status: 'PENDING_APPROVAL',
     }).returning();
   });
