@@ -11,7 +11,8 @@ import {
   LogOut,
   UploadCloud,
   Shield,
-  UserCircle
+  UserCircle,
+  ArrowLeftRight
 } from 'lucide-react';
 import { getDictionary } from '@/lib/i18n';
 
@@ -102,15 +103,27 @@ export default async function AppLayout({
             </div>
           </Link>
 
-          <form action={async () => {
-            'use server';
-            await signOut({ redirectTo: '/' });
-          }}>
-            <button type="submit" className="flex w-full justify-center items-center gap-2 p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800 rounded-lg transition-all font-medium shadow-sm text-slate-600 dark:text-slate-300">
-              <LogOut className="w-4 h-4" />
-              Log Off
-            </button>
-          </form>
+          <div className="space-y-2">
+            <form action={async () => {
+              'use server';
+              await signOut({ redirectTo: '/api/auth/signin' });
+            }}>
+              <button type="submit" className="flex w-full justify-center items-center gap-2 p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg transition-all font-medium shadow-sm text-sm">
+                <ArrowLeftRight className="w-4 h-4" />
+                {dict.sidebar.switchAccount}
+              </button>
+            </form>
+
+            <form action={async () => {
+              'use server';
+              await signOut({ redirectTo: '/' });
+            }}>
+              <button type="submit" className="flex w-full justify-center items-center gap-2 p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800 rounded-lg transition-all font-medium shadow-sm text-slate-600 dark:text-slate-300 text-sm">
+                <LogOut className="w-4 h-4" />
+                {dict.sidebar.logOff}
+              </button>
+            </form>
+          </div>
         </div>
       </aside>
 

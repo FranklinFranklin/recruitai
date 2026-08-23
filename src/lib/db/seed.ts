@@ -54,6 +54,18 @@ async function main() {
     role: 'RECRUITER',
   });
 
+  // 6. Create a Sample Vacancy for AI Matching
+  await db.insert(schema.vacancies).values({
+    tenantId: tenant.id,
+    title: 'Senior Frontend Engineer',
+    department: 'Engineering',
+    customRules: JSON.stringify({
+      mandatory_skills: ['React', 'TypeScript'],
+      minimum_experience_years: 4,
+      location_preference: 'Hybrid or Remote'
+    })
+  });
+
   console.log('✅ Seeding complete!');
   console.log('--------------------------------------------------');
   console.log('Log in with these emails (Auth.js uses Magic Links usually, or mock auth for dev):');

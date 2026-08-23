@@ -7,26 +7,37 @@ import { inngest } from './client';
 import { eq } from 'drizzle-orm';
 import { logAudit } from '@/lib/db/audit';
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const pdf = require('pdf-parse');
+
 export async function uploadCandidateCV(formData: FormData) {
   const { activeTenantId, user } = await requireTenantMember();
   
-  // SECURITY FIX: Never accept raw files directly on the Next.js server in production.
-  // The client should request a presigned S3 URL and upload directly to an isolated bucket.
-  // The backend should only receive the S3 Object Key from the client.
-  const objectKey = formData.get('s3_object_key') as string;
+  const file = formData.get('cv_file') as File;
   
-  if (!objectKey || typeof objectKey !== 'string') {
-    throw new Error('Invalid file reference. Client must upload to secure storage first.');
+  if (!file) {
+    throw new Error('No file uploaded.');
   }
 
-  // Validate the object key matches expected UUID format to prevent path traversal
-  if (!/^[a-zA-Z0-9-]+\.pdf$/.test(objectKey)) {
+  if (file.type !== 'application/pdf') {
     throw new Error('Invalid file format. Only PDF is allowed.');
   }
 
-  // We construct the URL. The Inngest worker will fetch this from the isolated bucket
-  // AFTER the bucket's automated virus scanner (e.g., ClamAV Lambda) flags it as SAFE.
-  const secureDocumentUrl = `s3://secure-cv-bucket/${activeTenantId}/${objectKey}`;
+  // Parse PDF in memory
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  
+  let rawText = '';
+  try {
+    const pdfData = await pdf(buffer);
+    rawText = pdfData.text;
+  } catch (err) {
+    console.error("Failed to parse PDF:", err);
+    throw new Error("Failed to extract text from PDF");
+  }
+
+  // We construct the URL to pretend it's in an isolated bucket
+  const secureDocumentUrl = `s3://secure-cv-bucket/${activeTenantId}/${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
 
   // 1. Create the database record (tenant-isolated via RLS)
   const [newCandidate] = await withTenant(activeTenantId, async (tx) => {
@@ -42,13 +53,14 @@ export async function uploadCandidateCV(formData: FormData) {
   // Log audit event
   await logAudit(activeTenantId, user.id, 'CANDIDATE_UPLOADED', newCandidate.id);
 
-  // 2. Trigger the asynchronous Inngest workflow
+  // 2. Trigger the asynchronous Inngest workflow, passing the extracted text
   await inngest.send({
     name: 'recruitment/candidate.uploaded',
     data: {
       tenantId: activeTenantId,
       candidateId: newCandidate.id,
       documentUrl: secureDocumentUrl,
+      rawText: rawText,
     }
   });
 

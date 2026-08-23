@@ -85,7 +85,7 @@ export default async function CandidatesPage() {
                   </span>
                 </td>
                 <td className="p-4">
-                  {candidate.matchScore ? (
+                  {candidate.matchScore !== null && candidate.matchScore !== undefined ? (
                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
                       {candidate.matchScore}%
                     </span>

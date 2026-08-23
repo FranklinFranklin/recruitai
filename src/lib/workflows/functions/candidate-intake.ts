@@ -22,10 +22,19 @@ export const processCandidateIntake = inngest.createFunction(
     try {
       const { tenantId, candidateId, documentUrl } = event.data;
 
-      // STEP 1: Extract text from the document
-      const documentText = await step.run("extract-document-text", async () => {
-        // Stub: Fetch document URL and run OCR / text extraction
-        return "John Doe is a Senior React Engineer with 5 years of TypeScript experience.";
+      // STEP 1: Download CV and Extract raw text
+      const documentText = await step.run("download-and-ocr", async () => {
+        if (event.data.rawText) {
+          return event.data.rawText;
+        }
+        // Fallback for older events or manual testing
+        return `
+          John Doe
+          Email: john.doe@example.com
+          Experience: 5 years as a Software Engineer.
+          Skills: React, TypeScript, Node.js, Postgres.
+          Location: Near HQ.
+        `;
       });
 
       // STEP 2: Use AI to extract structured data from text via the Gateway

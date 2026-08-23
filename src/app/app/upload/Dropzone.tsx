@@ -55,9 +55,8 @@ export default function Dropzone({ dict }: { dict: any }) {
     try {
       setStatus('uploading');
       
-      const mockObjectKey = `cv-${Math.random().toString(36).substring(7)}.pdf`;
       const formData = new FormData();
-      formData.append('s3_object_key', mockObjectKey);
+      formData.append('cv_file', file);
       
       // Instantly trigger real backend action
       await uploadCandidateCV(formData);

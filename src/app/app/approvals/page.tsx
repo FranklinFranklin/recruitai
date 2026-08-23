@@ -4,7 +4,7 @@ import { candidates } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import ApprovalButtons from './ApprovalButtons';
 import ViewCvButton from './ViewCvButton';
-import { FileText, AlertCircle, CheckCircle as CheckCircleIcon } from 'lucide-react';
+import { FileText, AlertCircle } from 'lucide-react';
 import RealtimeRefresher from '../RealtimeRefresher';
 import { getDictionary } from '@/lib/i18n';
 
@@ -96,7 +96,7 @@ export default async function ApprovalsPage() {
                     AI Match Engine
                   </h4>
                   <span className="px-3 py-1 bg-indigo-600 text-white text-sm font-black rounded-full shadow-sm">
-                    {candidate.matchScore || 92}% MATCH
+                    {candidate.matchScore ?? 92}% MATCH
                   </span>
                 </div>
                 
@@ -105,20 +105,9 @@ export default async function ApprovalsPage() {
                 </p>
 
                 {/* Explainable AI Points */}
-                <ul className="space-y-2 mb-4">
-                  <li className="flex items-start gap-2 text-sm">
-                    <div className="p-0.5 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 rounded mt-0.5"><CheckCircleIcon className="w-3 h-3" /></div>
-                    <span className="text-slate-700 dark:text-slate-300"><strong>Experience match (+40%):</strong> Requires 3 yrs, candidate has {candidate.yearsOfExperience || 4} yrs.</span>
-                  </li>
-                  <li className="flex items-start gap-2 text-sm">
-                    <div className="p-0.5 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 rounded mt-0.5"><CheckCircleIcon className="w-3 h-3" /></div>
-                    <span className="text-slate-700 dark:text-slate-300"><strong>Skills overlap (+35%):</strong> Contains 80% of mandatory keywords.</span>
-                  </li>
-                  <li className="flex items-start gap-2 text-sm">
-                    <div className="p-0.5 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded mt-0.5"><svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg></div>
-                    <span className="text-slate-700 dark:text-slate-300"><strong>Location heuristic (+17%):</strong> Close proximity to HQ detected in CV context.</span>
-                  </li>
-                </ul>
+                <div className="p-3 bg-white/50 dark:bg-indigo-900/20 rounded border border-indigo-100/50 dark:border-indigo-800/30 text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed shadow-inner">
+                  {candidate.matchReasoning || "No reasoning provided by AI."}
+                </div>
               </div>
               
               <div className="mt-4 pt-4 border-t border-indigo-200/60 dark:border-indigo-800/60">

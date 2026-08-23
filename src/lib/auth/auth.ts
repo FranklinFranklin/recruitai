@@ -42,6 +42,11 @@ export const authConfig = {
         clientId: process.env.AUTH_GOOGLE_ID,
         clientSecret: process.env.AUTH_GOOGLE_SECRET,
         allowDangerousEmailAccountLinking: false,
+        authorization: {
+          params: {
+            prompt: "select_account",
+          },
+        },
       })
     ] : []),
     ...(process.env.AUTH_MICROSOFT_ENTRA_ID_ID && process.env.AUTH_MICROSOFT_ENTRA_ID_SECRET ? [
@@ -50,6 +55,11 @@ export const authConfig = {
         clientSecret: process.env.AUTH_MICROSOFT_ENTRA_ID_SECRET,
         issuer: `https://login.microsoftonline.com/${process.env.AUTH_MICROSOFT_ENTRA_ID_TENANT_ID || 'common'}/v2.0`,
         allowDangerousEmailAccountLinking: false,
+        authorization: {
+          params: {
+            prompt: "select_account",
+          },
+        },
       })
     ] : [])
   ],

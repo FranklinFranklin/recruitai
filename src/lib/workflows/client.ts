@@ -7,6 +7,7 @@ type Events = {
       tenantId: string;
       candidateId: string;
       documentUrl: string;
+      rawText?: string;
     };
   };
   "recruitment/approval.submitted": {

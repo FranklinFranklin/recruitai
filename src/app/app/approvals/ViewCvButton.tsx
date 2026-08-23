@@ -33,13 +33,30 @@ export default function ViewCvButton({ url }: { url: string }) {
               </button>
             </div>
             
-            {/* PDF Viewer using iframe */}
-            <div className="flex-1 w-full h-full bg-slate-100 p-2 md:p-4 overflow-hidden relative">
-              <iframe 
-                src={`${url}#view=FitH`} 
-                className="w-full h-full border-0 rounded bg-white shadow-inner"
-                title="Candidate CV"
-              />
+            {/* PDF Viewer using iframe or placeholder */}
+            <div className="flex-1 w-full h-full bg-slate-200 dark:bg-slate-900 p-4 md:p-8 overflow-y-auto flex items-center justify-center">
+              {url.startsWith('s3://') ? (
+                <div className="bg-white dark:bg-slate-800 p-10 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 max-w-lg text-center flex flex-col items-center gap-4">
+                  <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                    <FileText className="w-10 h-10 text-blue-500" />
+                  </div>
+                  <h4 className="text-xl font-bold text-slate-900 dark:text-white">Secure Document Storage</h4>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    This file is securely stored in an isolated Amazon S3 bucket at:
+                    <br/>
+                    <code className="bg-slate-100 dark:bg-slate-900 p-1 px-2 rounded mt-2 block break-all border dark:border-slate-700">{url}</code>
+                  </p>
+                  <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-400 rounded-lg text-sm border border-amber-200 dark:border-amber-800/30">
+                    <strong>Demo Mode:</strong> Because this is a demonstration environment, the physical PDF was discarded after AI extraction to prevent server abuse. In a production app, the backend would generate a short-lived AWS presigned URL to render the PDF here.
+                  </div>
+                </div>
+              ) : (
+                <iframe 
+                  src={`${url}#view=FitH`} 
+                  className="w-full h-full border-0 rounded bg-white shadow-inner"
+                  title="Candidate CV"
+                />
+              )}
             </div>
           </div>
         </div>

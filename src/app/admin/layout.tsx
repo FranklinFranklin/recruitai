@@ -1,7 +1,7 @@
 import { requireSystemAdmin } from '@/lib/auth/utils';
 import { signOut } from '@/lib/auth/auth';
 import Link from 'next/link';
-import { ShieldAlert, Users, Building, Settings, LayoutDashboard, Database, Shield, LogOut } from 'lucide-react';
+import { ShieldAlert, Users, Building, Settings, LayoutDashboard, Database, Shield, LogOut, ArrowLeftRight } from 'lucide-react';
 
 export default async function AdminLayout({
   children,
@@ -44,13 +44,22 @@ export default async function AdminLayout({
           </Link>
         </nav>
         
-        {/* Logout Button */}
-        <div className="p-4 border-t border-slate-800">
+        {/* Switch Account & Logout Buttons */}
+        <div className="p-4 border-t border-slate-800 space-y-1">
+          <form action={async () => {
+            'use server';
+            await signOut({ redirectTo: '/api/auth/signin' });
+          }}>
+            <button type="submit" className="flex w-full items-center gap-2 p-2 hover:bg-slate-800 text-gray-300 hover:text-white rounded transition-colors text-sm font-medium">
+              <ArrowLeftRight className="w-4 h-4" />
+              Switch Account
+            </button>
+          </form>
           <form action={async () => {
             'use server';
             await signOut({ redirectTo: '/' });
           }}>
-            <button type="submit" className="flex w-full items-center gap-2 p-2 hover:bg-red-900/50 text-gray-300 hover:text-white rounded transition-colors">
+            <button type="submit" className="flex w-full items-center gap-2 p-2 hover:bg-red-900/50 text-gray-300 hover:text-white rounded transition-colors text-sm font-medium">
               <LogOut className="w-4 h-4" />
               Sign Out
             </button>
