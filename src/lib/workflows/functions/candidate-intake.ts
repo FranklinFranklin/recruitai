@@ -70,22 +70,35 @@ export const processCandidateIntake = inngest.createFunction(
 
           const finalVacancyId = existing?.matchedVacancyId || structuredProfile.matchedVacancyId;
           const finalScore = existing?.matchScore || structuredProfile.matchScore;
-          const finalReasoning = existing?.matchReasoning || structuredProfile.matchReasoning;
 
-          const finalJobTitle = existing?.jobTitle || structuredProfile.jobTitle;
-          const finalLastJobDuration = existing?.lastJobDuration || structuredProfile.lastJobDuration;
+          let currentReasoning = structuredProfile.matchReasoning;
+          let jobTitle = structuredProfile.jobTitle;
+          let lastJobDuration = structuredProfile.lastJobDuration;
+
+          if (existing?.matchReasoning) {
+            try {
+              if (existing.matchReasoning.startsWith('{')) {
+                const parsed = JSON.parse(existing.matchReasoning);
+                currentReasoning = parsed.reasoning || existing.matchReasoning;
+                jobTitle = parsed.jobTitle || jobTitle;
+                lastJobDuration = parsed.lastJobDuration || lastJobDuration;
+              }
+            } catch {}
+          }
 
           await tx.update(candidates)
             .set({ 
               firstName: finalFirstName,
               lastName: finalLastName,
-              jobTitle: finalJobTitle,
-              lastJobDuration: finalLastJobDuration,
               skills: finalSkills,
               yearsOfExperience: finalExperience,
               matchedVacancyId: finalVacancyId,
               matchScore: finalScore,
-              matchReasoning: finalReasoning,
+              matchReasoning: JSON.stringify({
+                reasoning: currentReasoning,
+                jobTitle,
+                lastJobDuration,
+              }),
               status: 'PENDING_APPROVAL' 
             })
             .where(eq(candidates.id, candidateId));

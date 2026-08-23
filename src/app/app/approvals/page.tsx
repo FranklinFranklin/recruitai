@@ -15,11 +15,29 @@ export default async function ApprovalsPage() {
 
   const pendingCandidates = await withTenant(activeTenantId, async (tx) => {
     const raw = await tx.select().from(candidates).where(eq(candidates.status, 'PENDING_APPROVAL'));
-    return raw.map((c: any) => ({
-      ...c,
-      skills: Array.isArray(c.skills) ? c.skills : (typeof c.skills === 'string' ? JSON.parse(c.skills || '[]') : []),
-      createdAt: c.createdAt ? c.createdAt.toISOString() : null,
-    }));
+    return raw.map((c: any) => {
+      let reasoningText = c.matchReasoning || '';
+      let jobTitle = undefined;
+      let lastJobDuration = undefined;
+
+      if (c.matchReasoning && typeof c.matchReasoning === 'string' && c.matchReasoning.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(c.matchReasoning);
+          reasoningText = parsed.reasoning || parsed.matchReasoning || c.matchReasoning;
+          jobTitle = parsed.jobTitle;
+          lastJobDuration = parsed.lastJobDuration;
+        } catch {}
+      }
+
+      return {
+        ...c,
+        jobTitle: jobTitle || c.jobTitle || 'Professional',
+        lastJobDuration: lastJobDuration || c.lastJobDuration || `${c.yearsOfExperience || 3} years (Most Recent Role)`,
+        matchReasoning: reasoningText,
+        skills: Array.isArray(c.skills) ? c.skills : (typeof c.skills === 'string' ? JSON.parse(c.skills || '[]') : []),
+        createdAt: c.createdAt ? c.createdAt.toISOString() : null,
+      };
+    });
   });
 
   if (pendingCandidates.length === 0) {

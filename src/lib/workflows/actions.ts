@@ -108,13 +108,15 @@ export async function uploadCandidateCV(formData: FormData) {
       tenantId: activeTenantId,
       firstName: profile.firstName,
       lastName: profile.lastName,
-      jobTitle: profile.jobTitle,
-      lastJobDuration: profile.lastJobDuration,
       skills: profile.skills,
       yearsOfExperience: profile.yearsOfExperience,
       matchedVacancyId: profile.matchedVacancyId,
       matchScore: profile.matchScore,
-      matchReasoning: profile.matchReasoning,
+      matchReasoning: JSON.stringify({
+        reasoning: profile.matchReasoning,
+        jobTitle: profile.jobTitle,
+        lastJobDuration: profile.lastJobDuration,
+      }),
       resumeUrl: documentUrl,
       status: 'PENDING_APPROVAL',
     }).returning();
@@ -181,15 +183,34 @@ export async function updateCandidateData(candidateId: string, updates: {
   const { activeTenantId, user } = await requireTenantMember();
 
   await withTenant(activeTenantId, async (tx) => {
+    const existing = await tx.query.candidates.findFirst({
+      where: eq(candidates.id, candidateId)
+    });
+
+    let currentReasoning = 'Candidate data updated.';
+    if (existing?.matchReasoning) {
+      try {
+        if (existing.matchReasoning.startsWith('{')) {
+          const parsed = JSON.parse(existing.matchReasoning);
+          currentReasoning = parsed.reasoning || existing.matchReasoning;
+        } else {
+          currentReasoning = existing.matchReasoning;
+        }
+      } catch {}
+    }
+
     await tx.update(candidates)
       .set({
         firstName: updates.firstName,
         lastName: updates.lastName,
-        jobTitle: updates.jobTitle,
-        lastJobDuration: updates.lastJobDuration,
         skills: updates.skills,
         yearsOfExperience: updates.yearsOfExperience,
         matchedVacancyId: updates.matchedVacancyId,
+        matchReasoning: JSON.stringify({
+          reasoning: currentReasoning,
+          jobTitle: updates.jobTitle,
+          lastJobDuration: updates.lastJobDuration,
+        }),
       })
       .where(eq(candidates.id, candidateId));
   });

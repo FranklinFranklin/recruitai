@@ -16,12 +16,30 @@ export default async function CandidatesPage() {
   // Securely query candidates only for this tenant using RLS
   const allCandidates = await withTenant(activeTenantId, async (tx) => {
     const raw = await tx.select().from(candidates).orderBy(desc(candidates.createdAt));
-    return raw.map((c: any) => ({
-      ...c,
-      createdAt: c.createdAt ? c.createdAt.toISOString() : null,
-      resumeUrl: c.resumeUrl || null,
-      skills: Array.isArray(c.skills) ? c.skills : [],
-    }));
+    return raw.map((c: any) => {
+      let reasoningText = c.matchReasoning || '';
+      let jobTitle = undefined;
+      let lastJobDuration = undefined;
+
+      if (c.matchReasoning && typeof c.matchReasoning === 'string' && c.matchReasoning.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(c.matchReasoning);
+          reasoningText = parsed.reasoning || parsed.matchReasoning || c.matchReasoning;
+          jobTitle = parsed.jobTitle;
+          lastJobDuration = parsed.lastJobDuration;
+        } catch {}
+      }
+
+      return {
+        ...c,
+        jobTitle: jobTitle || c.jobTitle || 'Professional',
+        lastJobDuration: lastJobDuration || c.lastJobDuration,
+        matchReasoning: reasoningText,
+        createdAt: c.createdAt ? c.createdAt.toISOString() : null,
+        resumeUrl: c.resumeUrl || null,
+        skills: Array.isArray(c.skills) ? c.skills : [],
+      };
+    });
   });
 
   if (allCandidates.length === 0) {
