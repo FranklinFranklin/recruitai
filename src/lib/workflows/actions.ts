@@ -108,6 +108,8 @@ export async function uploadCandidateCV(formData: FormData) {
       tenantId: activeTenantId,
       firstName: profile.firstName,
       lastName: profile.lastName,
+      jobTitle: profile.jobTitle,
+      lastJobDuration: profile.lastJobDuration,
       skills: profile.skills,
       yearsOfExperience: profile.yearsOfExperience,
       matchedVacancyId: profile.matchedVacancyId,
@@ -167,7 +169,15 @@ export async function submitApproval(candidateId: string, approved: boolean, not
   return { success: true };
 }
 
-export async function updateCandidateData(candidateId: string, updates: { firstName: string; lastName: string; skills: string[]; yearsOfExperience: number; matchedVacancyId: string }) {
+export async function updateCandidateData(candidateId: string, updates: { 
+  firstName: string; 
+  lastName: string; 
+  jobTitle?: string;
+  lastJobDuration?: string;
+  skills: string[]; 
+  yearsOfExperience: number; 
+  matchedVacancyId: string 
+}) {
   const { activeTenantId, user } = await requireTenantMember();
 
   await withTenant(activeTenantId, async (tx) => {
@@ -175,6 +185,8 @@ export async function updateCandidateData(candidateId: string, updates: { firstN
       .set({
         firstName: updates.firstName,
         lastName: updates.lastName,
+        jobTitle: updates.jobTitle,
+        lastJobDuration: updates.lastJobDuration,
         skills: updates.skills,
         yearsOfExperience: updates.yearsOfExperience,
         matchedVacancyId: updates.matchedVacancyId,

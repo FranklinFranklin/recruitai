@@ -107,6 +107,8 @@ export const candidates = pgTable('candidates', {
   resumeUrl: text('resume_url'),
   
   // AI Extracted Data
+  jobTitle: text('job_title'),
+  lastJobDuration: text('last_job_duration'),
   skills: text('skills').array(),
   yearsOfExperience: integer('years_of_experience'),
   

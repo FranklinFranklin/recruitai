@@ -70,12 +70,20 @@ export default async function ApprovalsPage() {
               {/* Status & "What happened?" */}
               <div>
                 <h3 className="text-xl font-bold text-slate-900 dark:text-white">{candidate.firstName} {candidate.lastName}</h3>
+                {candidate.jobTitle && (
+                  <p className="text-sm font-semibold text-blue-600 dark:text-blue-400 mt-0.5">{candidate.jobTitle}</p>
+                )}
                 <ViewCvButton url={candidate.resumeUrl!} candidateName={`${candidate.firstName} ${candidate.lastName}`} />
               </div>
 
               {/* "What needs my attention?" */}
               <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border dark:border-slate-800 rounded-md">
                 <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">What needs my attention?</h4>
+                {candidate.jobTitle && (
+                  <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+                    Function Title: <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 rounded font-medium border border-blue-200 dark:border-blue-800">{candidate.jobTitle}</span>
+                  </p>
+                )}
                 <div className="flex flex-wrap gap-1">
                   {candidate.skills?.map((skill: string) => (
                     <span key={skill} className="px-2 py-1 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded text-xs font-medium text-slate-700 dark:text-slate-300">
@@ -83,7 +91,14 @@ export default async function ApprovalsPage() {
                     </span>
                   ))}
                 </div>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">Identified Experience: <strong className="dark:text-white">{candidate.yearsOfExperience || 'Unknown'} years</strong></p>
+                <div className="mt-2 text-sm text-slate-600 dark:text-slate-400 space-y-1">
+                  <p>Total Identified Experience: <strong className="dark:text-white">{candidate.yearsOfExperience || 'Unknown'} years</strong></p>
+                  {candidate.lastJobDuration && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Experience in Last Job: <strong className="text-slate-800 dark:text-slate-200 font-semibold">{candidate.lastJobDuration}</strong>
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
 

@@ -7,6 +7,8 @@ import { eq } from 'drizzle-orm';
 export interface ExtractedCandidateProfile {
   firstName: string;
   lastName: string;
+  jobTitle?: string;
+  lastJobDuration?: string;
   skills: string[];
   yearsOfExperience: number;
   matchedVacancyId?: string;
@@ -49,11 +51,13 @@ export async function extractCandidateProfile(
       workflowId: 'candidate-intake',
       operation: 'EXTRACT_CV',
       dataClassification: 'PERSONAL_DATA',
-      systemPrompt: 'Extract the real candidate profile from the CV document text. Return their actual first name, last name, list of technical/professional skills found in the text, and total years of experience as an integer. Do not use placeholder names like "Candidate", "Profile", or "John Doe".',
+      systemPrompt: 'Extract the real candidate profile from the CV document text. Return their actual first name, last name, job/function title, duration/years in their most recent position, list of technical/professional skills found in the text, and total years of experience as an integer. Do not use placeholder names like "Candidate", "Profile", or "John Doe".',
       prompt: `<filename>${fileName || ''}</filename>\n<cv_text>\n${rawText}\n</cv_text>`,
       schema: z.object({
         firstName: z.string(),
         lastName: z.string(),
+        jobTitle: z.string().optional(),
+        lastJobDuration: z.string().optional(),
         skills: z.array(z.string()),
         yearsOfExperience: z.number().nullable(),
       }),
@@ -71,6 +75,8 @@ export async function extractCandidateProfile(
       return {
         firstName: aiResult.firstName,
         lastName: aiResult.lastName || '',
+        jobTitle: aiResult.jobTitle || extractJobTitle(rawText, fileName),
+        lastJobDuration: aiResult.lastJobDuration || extractLastJobDuration(rawText),
         skills: aiResult.skills && aiResult.skills.length > 0 ? aiResult.skills : extractSkillsHeuristic(rawText),
         yearsOfExperience: aiResult.yearsOfExperience ?? extractExperienceHeuristic(rawText),
         ...matching
@@ -82,6 +88,8 @@ export async function extractCandidateProfile(
 
   // 2. High-Accuracy Heuristic Extraction directly from document text & filename
   const { firstName, lastName } = extractNameHeuristic(rawText, fileName);
+  const jobTitle = extractJobTitle(rawText, fileName);
+  const lastJobDuration = extractLastJobDuration(rawText);
   const skills = extractSkillsHeuristic(rawText);
   const yearsOfExperience = extractExperienceHeuristic(rawText);
   const matching = await matchCandidateWithVacancies({ firstName, lastName, skills, yearsOfExperience }, tenantId);
@@ -89,6 +97,8 @@ export async function extractCandidateProfile(
   return {
     firstName,
     lastName,
+    jobTitle,
+    lastJobDuration,
     skills,
     yearsOfExperience,
     ...matching
@@ -328,4 +338,74 @@ async function matchCandidateWithVacancies(
       matchReasoning: `Profile for ${profile.firstName} ${profile.lastName} processed with ${profile.yearsOfExperience} years experience.`
     };
   }
+}
+
+export function extractJobTitle(text: string, fileName?: string): string {
+  // 1. Check filename first
+  if (fileName) {
+    let clean = fileName.replace(/\.pdf$/i, '');
+    clean = clean.replace(/[_.-]+/g, ' ').trim();
+    const titleKeywords = [
+      'logistiek coordinator', 'logistiek coördinator', 'logistics coordinator',
+      'financieel analist', 'financieel adviseur', 'financial analyst',
+      'software engineer', 'software developer', 'frontend developer', 'backend developer',
+      'fullstack developer', 'full stack developer', 'devops engineer', 'system administrator',
+      'data engineer', 'data scientist', 'data analist', 'data analyst',
+      'project manager', 'product manager', 'scrum master', 'recruiter', 'hr advisor',
+      'accountant', 'controller', 'magazijnmedewerker', 'operations manager',
+      'account manager', 'sales manager', 'supply chain manager'
+    ];
+    for (const kw of titleKeywords) {
+      if (clean.toLowerCase().includes(kw)) {
+        return kw.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      }
+    }
+  }
+
+  // 2. Check document text header lines
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean).slice(0, 15);
+  for (const line of lines) {
+    if (line.includes(' - ')) {
+      const part = line.split(' - ')[1].trim();
+      if (part.length > 3 && part.length < 50 && !part.includes('@')) return part;
+    }
+    if (line.includes(' | ')) {
+      const part = line.split(' | ')[1].trim();
+      if (part.length > 3 && part.length < 50 && !part.includes('@')) return part;
+    }
+  }
+
+  // 3. Scan for common job titles in text
+  const commonRoles = [
+    'Logistics Coordinator', 'Logistiek Coördinator', 'Financial Analyst', 'Financieel Analist',
+    'Software Engineer', 'Full Stack Developer', 'Frontend Developer', 'Backend Developer',
+    'DevOps Engineer', 'Project Manager', 'Product Manager', 'Data Analyst', 'Accountant',
+    'Supply Chain Specialist', 'Operations Coordinator', 'HR Manager', 'Recruiter'
+  ];
+  for (const role of commonRoles) {
+    const regex = new RegExp(`\\b${role.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+    if (regex.test(text)) {
+      return role;
+    }
+  }
+
+  return 'Professional';
+}
+
+export function extractLastJobDuration(text: string): string {
+  // Matches date ranges like "2021 - Present", "2022 – 2024", "2020 - heden", "jan 2022 - now"
+  const recentRange = text.match(/(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)\s*)?(?:19|20)\d{2}\s*[-–—]\s*(?:(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)\s*)?(?:19|20)\d{2}|heden|present|nu|current|now)/i);
+  
+  if (recentRange) {
+    const years = recentRange[0].match(/(?:19|20)\d{2}/g);
+    if (years && years.length >= 1) {
+      const start = parseInt(years[0], 10);
+      const currentYear = new Date().getFullYear();
+      const end = years.length >= 2 ? parseInt(years[1], 10) : currentYear;
+      const duration = Math.max(1, end - start);
+      return `${duration} year${duration > 1 ? 's' : ''} (${recentRange[0].trim()})`;
+    }
+  }
+
+  return '2+ years (Most Recent Role)';
 }

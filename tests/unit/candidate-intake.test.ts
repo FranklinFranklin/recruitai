@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { processCandidateIntake } from '@/lib/workflows/functions/candidate-intake';
-import { extractNameHeuristic, extractSkillsHeuristic, extractExperienceHeuristic } from '@/lib/ai/cv-extractor';
+import { 
+  extractNameHeuristic, 
+  extractSkillsHeuristic, 
+  extractExperienceHeuristic,
+  extractJobTitle,
+  extractLastJobDuration
+} from '@/lib/ai/cv-extractor';
 
 describe('processCandidateIntake', () => {
   it('should be configured with the correct Inngest trigger', () => {
@@ -42,5 +48,19 @@ describe('processCandidateIntake', () => {
     const { firstName, lastName } = extractNameHeuristic(templateCvText, 'CV_Daan_Bakker_Logistiek_Coordinator.pdf');
     expect(firstName).toBe('Daan');
     expect(lastName).toBe('Bakker');
+  });
+
+  it('should extract candidate function/job title from filename or text', () => {
+    const titleFromFilename = extractJobTitle('', 'CV_Daan_Bakker_Logistiek_Coordinator.pdf');
+    expect(titleFromFilename.toLowerCase()).toContain('logistiek');
+
+    const titleFromText = extractJobTitle('Lotte de Vries - Financieel Analist\nExperience: 5 years');
+    expect(titleFromText).toBe('Financieel Analist');
+  });
+
+  it('should extract candidate experience duration in last job', () => {
+    const cvText = `Logistics Coordinator (2021 - Present)\nHandled inventory... (2018 - 2021)`;
+    const duration = extractLastJobDuration(cvText);
+    expect(duration).toContain('2021 - Present');
   });
 });

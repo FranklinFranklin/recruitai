@@ -72,10 +72,15 @@ export const processCandidateIntake = inngest.createFunction(
           const finalScore = existing?.matchScore || structuredProfile.matchScore;
           const finalReasoning = existing?.matchReasoning || structuredProfile.matchReasoning;
 
+          const finalJobTitle = existing?.jobTitle || structuredProfile.jobTitle;
+          const finalLastJobDuration = existing?.lastJobDuration || structuredProfile.lastJobDuration;
+
           await tx.update(candidates)
             .set({ 
               firstName: finalFirstName,
               lastName: finalLastName,
+              jobTitle: finalJobTitle,
+              lastJobDuration: finalLastJobDuration,
               skills: finalSkills,
               yearsOfExperience: finalExperience,
               matchedVacancyId: finalVacancyId,

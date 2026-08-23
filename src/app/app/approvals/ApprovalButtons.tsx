@@ -14,6 +14,7 @@ export default function ApprovalButtons({ candidate, dict }: { candidate: any, d
   const [formData, setFormData] = useState({
     firstName: candidate.firstName || '',
     lastName: candidate.lastName || '',
+    jobTitle: candidate.jobTitle || '',
     skills: candidate.skills?.join(', ') || '',
     yearsOfExperience: candidate.yearsOfExperience || 0,
     matchedVacancyId: candidate.matchedVacancyId || ''
@@ -74,6 +75,7 @@ export default function ApprovalButtons({ candidate, dict }: { candidate: any, d
       await updateCandidateData(candidate.id, {
         firstName: formData.firstName,
         lastName: formData.lastName,
+        jobTitle: formData.jobTitle,
         skills: formData.skills.split(',').map((s: string) => s.trim()).filter(Boolean),
         yearsOfExperience: Number(formData.yearsOfExperience),
         matchedVacancyId: formData.matchedVacancyId
@@ -179,18 +181,29 @@ export default function ApprovalButtons({ candidate, dict }: { candidate: any, d
               </div>
 
               <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Function / Job Title</label>
+                <input 
+                  type="text" 
+                  className="w-full border dark:border-slate-700 dark:bg-slate-800 rounded-lg dark:text-white p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  value={formData.jobTitle}
+                  onChange={e => setFormData({...formData, jobTitle: e.target.value})}
+                  placeholder="e.g. Logistiek Coördinator, Financieel Analist"
+                />
+              </div>
+
+              <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Extracted Skills (Comma separated)</label>
                 <textarea 
                   className="w-full border dark:border-slate-700 dark:bg-slate-800 rounded-lg dark:text-white p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none min-h-[80px]"
                   value={formData.skills}
                   onChange={e => setFormData({...formData, skills: e.target.value})}
                 />
-                <p className="text-xs text-slate-400 mt-1">Example: React, Node.js, Project Management</p>
+                <p className="text-xs text-slate-400 mt-1">Example: WMS, Supply Chain, Planning, SAP</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Experience (Years)</label>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Total Experience (Years)</label>
                   <input 
                     type="number" 
                     min="0"
