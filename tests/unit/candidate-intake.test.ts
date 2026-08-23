@@ -81,4 +81,46 @@ describe('processCandidateIntake', () => {
     expect(firstName).toBe('Franklin');
     expect(lastName).toBe('Santos');
   });
+
+  it('should accurately extract name, job title, skills, and experience from Dutch ICT tabular CV', () => {
+    const cvText = `
+      Curriculum Vitae
+      Persoonlijke gegevens
+      Voorletters en voornaam Franklin Santos
+      Geboortedatum 2 oktober 1984
+      Plaats Rotterdam
+      Telefoonnummer 06 - 27257712
+      E-mailadres dhr.Franklin@gmail.com
+      
+      Opleidingen/Certificaten 
+      Opleiding Diploma Periode
+      Medewerker Beheer (mbo-2) Ja Aug.2006 - Jun.2007
+      Front-End Developer Ja Jun.2023- Sept.2023
+      
+      Certificaten
+      AZ-900 (Microsoft) ja 2025
+      Atlassian Jira Administrator Ja 2024
+      Lean Six Sigma – Yellow belt Ja 2024
+      
+      Werkervaring 
+      Functie Werkgever Periode
+      Senior Medewerker ICT Star-shl 2023 – Heden
+      Collega’s helpen met hun ICT-vragen en werkplekbeheer.
+      Programma’s: Citrix Director, SCCM, Azure, O365, Active Directory, Jira, PHP, React
+    `;
+    const { firstName, lastName } = extractNameHeuristic(cvText);
+    expect(firstName).toBe('Franklin');
+    expect(lastName).toBe('Santos');
+
+    const title = extractJobTitle(cvText);
+    expect(title).toBe('Senior Medewerker ICT');
+
+    const skills = extractSkillsHeuristic(cvText);
+    expect(skills).toContain('Citrix');
+    expect(skills).toContain('Azure');
+    expect(skills).toContain('React');
+
+    const duration = extractLastJobDuration(cvText);
+    expect(duration).toContain('2023 – Heden');
+  });
 });

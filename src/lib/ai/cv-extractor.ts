@@ -22,6 +22,8 @@ const COMMON_SKILLS = [
   'PHP', 'Ruby', 'Go', 'Rust', 'Swift', 'Kotlin', 'SQL', 'PostgreSQL', 'MySQL', 'MongoDB',
   'AWS', 'Azure', 'GCP', 'Docker', 'Kubernetes', 'CI/CD', 'Git', 'HTML', 'CSS', 'Tailwind',
   'Vue', 'Angular', 'GraphQL', 'REST API', 'Linux', 'DevOps', 'Terraform', 'Spring Boot', 'Django', 'FastAPI', 'Figma',
+  'Citrix', 'SCCM', 'Active Directory', 'O365', 'Office 365', 'Exchange', 'Jira', 'Confluence', 'Topdesk',
+  'Symfony', 'jQuery', 'Flutter', 'Xcode', 'DHCP', 'SSH', 'PRTG', 'Ivanti', 'Afas', 'Exact', 'Planon', 'Qlik',
   
   // Logistics, Supply Chain & Operations
   'Logistiek', 'Logistics', 'Supply Chain', 'WMS', 'TMS', 'Voorraadbeheer', 'Inventory Management',
@@ -30,8 +32,7 @@ const COMMON_SKILLS = [
   
   // Finance & Accounting
   'Finance', 'Financial Analysis', 'Financieel', 'Accounting', 'Boekhouding', 'Controlling',
-  'Budgeting', 'Reporting', 'Jaarrekening', 'Auditing', 'Fiscaliteit', 'Tax', 'Exact', 'AFAS',
-  'Navision', 'Power BI', 'KPI', 'IFRS', 'Credit Management',
+  'Budgeting', 'Reporting', 'Jaarrekening', 'Auditing', 'Fiscaliteit', 'Tax',
   
   // Business, HR & Management
   'Project Management', 'Product Management', 'Stakeholder Management', 'Agile', 'Scrum',
@@ -178,9 +179,10 @@ export function extractNameHeuristic(text: string, fileName?: string): { firstNa
 
   const ignoredKeywords = [
     'contact', 'werkervaring', 'experience', 'opleiding', 'education', 'skills',
-    'vaardigheden', 'personalia', 'over mij', 'about me', 'email', 'telefoon',
-    'phone', 'address', 'adres', 'page', 'pagina', 'confidential', 'vertrouwelijk',
-    'samenvatting', 'summary', 'referenties', 'references', 'certificaten'
+    'vaardigheden', 'personalia', 'persoonlijke gegevens', 'persoonsgegevens', 'over mij',
+    'about me', 'email', 'telefoon', 'phone', 'address', 'adres', 'page', 'pagina',
+    'confidential', 'vertrouwelijk', 'samenvatting', 'summary', 'referenties',
+    'references', 'certificaten', 'geboortedatum', 'plaats', 'geslacht', 'woonplaats'
   ];
 
   for (const rawLine of lines.slice(0, 15)) {
@@ -189,7 +191,7 @@ export function extractNameHeuristic(text: string, fileName?: string): { firstNa
       continue;
     }
 
-    let line = rawLine.replace(/^(?:curriculum vitae|cv|resume|profiel|profile)\s*[:\-–—\s]*/i, '').trim();
+    let line = rawLine.replace(/^(?:curriculum vitae|cv|resume|profiel|profile|voorletters en voornaam|voorletters|voornaam en achternaam|voornaam|achternaam|volledige naam|naam|name)\s*[:\-–—\s]*/i, '').trim();
     if (line.includes(' - ')) line = line.split(' - ')[0].trim();
     if (line.includes(' – ')) line = line.split(' – ')[0].trim();
     if (line.includes(' | ')) line = line.split(' | ')[0].trim();
@@ -359,11 +361,11 @@ export function isValidJobTitle(title?: string | null): boolean {
     'kvk', 'linkedin', 'github', 'adres', 'address', 'postcode',
     'woonplaats', 'geboortedatum', 'rijbewijs', 'nationaliteit',
     'curriculum', 'resume', 'pagina', 'page', 'contact', 'personalia',
-    'opleiding', 'education', 'referentie', 'referenties', 'competenties',
-    'heden', 'present', 'current', 'now', 'nu', 'werkervaring', 'ervaring',
-    'experience', 'vaardigheden', 'talen', 'languages', 'januari', 'februari',
-    'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september',
-    'oktober', 'november', 'december'
+    'persoonlijke gegevens', 'persoonsgegevens', 'opleiding', 'education',
+    'referentie', 'referenties', 'competenties', 'heden', 'present', 'current',
+    'now', 'nu', 'werkervaring', 'ervaring', 'experience', 'vaardigheden',
+    'talen', 'languages', 'januari', 'februari', 'maart', 'april', 'mei',
+    'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'
   ];
   const lower = clean.toLowerCase();
   if (contactKeywords.some(kw => lower === kw || lower.startsWith(kw + ':') || lower.startsWith(kw + ' -') || lower === kw || (kw.length > 4 && lower.includes(kw)))) {
@@ -418,9 +420,76 @@ export function extractJobTitle(text: string, fileName?: string): string {
     }
   }
 
-  // 3. Check standalone header lines (e.g. line right beneath the candidate name)
+  const commonRoles = [
+    // IT & Software
+    'Senior Medewerker ICT', 'Medewerker ICT', 'Medewerker Beheer', 'Werkplekbeheerder',
+    'Systeembeheerder', 'Netwerkbeheerder', 'Applicatiebeheerder', 'IT Support Engineer',
+    'Support Engineer', 'Technisch Support Agent', 'Helpdesk Medewerker', 'Service Desk Medewerker',
+    'IT Engineer', 'Front-End Developer', 'Frontend Developer', 'Full stack Developer',
+    'Fullstack Developer', 'Backend Developer', 'Webdeveloper', 'Web Developer', 'Webdesigner',
+    'Apple IOS Developer', 'iOS Developer', 'Android Developer', 'Technisch Engineer', 'Teamleider',
+    'Projectleider', 'IT-Projectmedewerker', 'Software Engineer', 'DevOps Engineer', 'System Administrator',
+    'Data Engineer', 'Data Scientist', 'Data Analyst', 'Cloud Engineer', 'Security Officer',
+    
+    // Logistics & Operations
+    'Logistics Coordinator', 'Logistiek Coördinator', 'Logistiek Medewerker', 'Magazijnmedewerker',
+    'Supply Chain Specialist', 'Supply Chain Manager', 'Operations Coordinator', 'Operations Manager',
+    'Warehouse Supervisor', 'Planner', 'Expeditiemedewerker', 'Chauffeur',
+    
+    // Finance & Management
+    'Financial Analyst', 'Financieel Analist', 'Financieel Adviseur', 'Accountant', 'Controller',
+    'Project Manager', 'Product Manager', 'Scrum Master', 'HR Manager', 'Recruiter',
+    'Account Manager', 'Sales Manager', 'Customer Service Representative', 'Klantenservice Medewerker'
+  ];
+
+  // 3. Scan the Werkervaring / Work Experience section for tabular and role entries
+  const lowerText = text.toLowerCase();
+  const expMatch = text.match(/\b(?:werkervaring|work experience|ervaring|arbeidsverleden|loopbaan|professional experience)\b/i);
+  if (expMatch && expMatch.index !== undefined) {
+    const expSlice = text.slice(expMatch.index, expMatch.index + 1500);
+    const expLines = expSlice.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    
+    for (const line of expLines.slice(1, 10)) {
+      const lowerLine = line.toLowerCase();
+      // Skip column headers
+      if (lowerLine.startsWith('functie') || lowerLine.startsWith('werkervaring') || lowerLine.startsWith('periode') || lowerLine.startsWith('werkgever')) {
+        continue;
+      }
+
+      // If line contains date or company, strip it to isolate the job title
+      const lineWithoutDate = line.replace(/(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)\.?\s*)?(?:19|20)\d{2}\s*[-–—]\s*(?:(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)\.?\s*)?(?:19|20)\d{2}|heden|present|nu|current|now).*$/i, '').trim();
+
+      if (lineWithoutDate && lineWithoutDate.length >= 3) {
+        for (const role of commonRoles) {
+          const regex = new RegExp(`\\b${role.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+          if (regex.test(lineWithoutDate)) {
+            return role;
+          }
+        }
+        if (isValidJobTitle(lineWithoutDate) && lineWithoutDate.length <= 45) {
+          return lineWithoutDate;
+        }
+        const parts = lineWithoutDate.split(/\s{2,}|\t/);
+        if (parts.length >= 1 && isValidJobTitle(parts[0])) {
+          return parts[0];
+        }
+      }
+    }
+  }
+
+  // 4. Scan for common job titles across the entire CV text
+  for (const role of commonRoles) {
+    const regex = new RegExp(`\\b${role.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+    if (regex.test(text)) {
+      return role;
+    }
+  }
+
+  // 5. Check standalone header lines (e.g. line right beneath the candidate name)
+  const roleKeywords = ['developer', 'engineer', 'coordinator', 'coördinator', 'medewerker', 'analist', 'analyst', 'manager', 'specialist', 'adviseur', 'beheerder', 'controller', 'officer', 'architect', 'designer', 'lead', 'directeur', 'supervisor'];
   for (const line of lines.slice(1, 6)) {
-    if (isValidJobTitle(line)) {
+    const lowerLine = line.toLowerCase();
+    if (isValidJobTitle(line) && roleKeywords.some(kw => lowerLine.includes(kw))) {
       // Must not be a date range or pure location
       if (!/(?:19|20)\d{2}/.test(line) && !/^(?:amsterdam|rotterdam|utrecht|den haag|eindhoven|nederland|netherlands)$/i.test(line)) {
         const words = line.split(/\s+/);
@@ -428,23 +497,6 @@ export function extractJobTitle(text: string, fileName?: string): string {
           return line;
         }
       }
-    }
-  }
-
-  // 4. Scan for common job titles across the entire CV text
-  const commonRoles = [
-    'Logistics Coordinator', 'Logistiek Coördinator', 'Logistiek Medewerker', 'Magazijnmedewerker',
-    'Financial Analyst', 'Financieel Analist', 'Financieel Adviseur', 'Accountant', 'Controller',
-    'Software Engineer', 'Full Stack Developer', 'Frontend Developer', 'Backend Developer',
-    'DevOps Engineer', 'System Administrator', 'Data Engineer', 'Data Scientist', 'Data Analyst',
-    'Project Manager', 'Product Manager', 'Scrum Master', 'Operations Manager', 'Warehouse Supervisor',
-    'Supply Chain Specialist', 'Supply Chain Manager', 'Operations Coordinator', 'HR Manager', 'Recruiter',
-    'Account Manager', 'Sales Manager', 'Customer Service Representative', 'Klantenservice Medewerker'
-  ];
-  for (const role of commonRoles) {
-    const regex = new RegExp(`\\b${role.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
-    if (regex.test(text)) {
-      return role;
     }
   }
 
