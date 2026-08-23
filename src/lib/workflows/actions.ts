@@ -121,7 +121,7 @@ export async function uploadCandidateCV(formData: FormData) {
   // Log audit event
   await logAudit(activeTenantId, user.id, 'CANDIDATE_UPLOADED', newCandidate.id);
 
-  // 2. Trigger the asynchronous Inngest workflow, passing the extracted text
+  // 2. Trigger the asynchronous Inngest workflow, passing the extracted text and original filename
   try {
     await inngest.send({
       name: 'recruitment/candidate.uploaded',
@@ -130,6 +130,7 @@ export async function uploadCandidateCV(formData: FormData) {
         candidateId: newCandidate.id,
         documentUrl: documentUrl,
         rawText: rawText,
+        fileName: file.name,
       }
     });
   } catch (inngestErr) {

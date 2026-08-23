@@ -20,7 +20,7 @@ export const processCandidateIntake = inngest.createFunction(
   },
   async ({ event, step }) => {
     try {
-      const { tenantId, candidateId, documentUrl } = event.data;
+      const { tenantId, candidateId, documentUrl, fileName } = event.data;
 
       // STEP 1: Download CV and Extract raw text
       const documentText = await step.run("download-and-ocr", async () => {
@@ -33,21 +33,54 @@ export const processCandidateIntake = inngest.createFunction(
       // STEP 2 & 3: Extract structured data and match vacancies
       const structuredProfile = await step.run("ai-extract-and-match", async () => {
         const { extractCandidateProfile } = await import("@/lib/ai/cv-extractor");
-        return await extractCandidateProfile(documentText, tenantId);
+        return await extractCandidateProfile(documentText, tenantId, fileName);
       });
 
       // STEP 4: Update the candidate record in the database securely using RLS
       await step.run("update-candidate-record", async () => {
         await withTenant(tenantId, async (tx) => {
+          // Fetch existing candidate to avoid replacing verified data with generic placeholders
+          const existing = await tx.query.candidates.findFirst({
+            where: eq(candidates.id, candidateId)
+          });
+
+          const isPlaceholderName = (name?: string) => 
+            !name || 
+            name === 'Processing...' || 
+            name.toLowerCase() === 'candidate' || 
+            name.toLowerCase() === 'profile' ||
+            name.toLowerCase() === 'james miller' ||
+            name.toLowerCase() === 'john doe';
+
+          const finalFirstName = (!isPlaceholderName(structuredProfile.firstName))
+            ? structuredProfile.firstName
+            : (!isPlaceholderName(existing?.firstName) ? existing!.firstName : structuredProfile.firstName);
+
+          const finalLastName = (!isPlaceholderName(structuredProfile.lastName))
+            ? structuredProfile.lastName
+            : (!isPlaceholderName(existing?.lastName) ? existing!.lastName : structuredProfile.lastName);
+
+          const finalSkills = (existing?.skills && existing.skills.length > 0 && !existing.skills.every((s: string) => s.includes('(Mocked)')))
+            ? existing.skills
+            : structuredProfile.skills;
+
+          const finalExperience = (existing?.yearsOfExperience !== null && existing?.yearsOfExperience !== undefined && existing.yearsOfExperience > 0)
+            ? existing.yearsOfExperience
+            : structuredProfile.yearsOfExperience;
+
+          const finalVacancyId = existing?.matchedVacancyId || structuredProfile.matchedVacancyId;
+          const finalScore = existing?.matchScore || structuredProfile.matchScore;
+          const finalReasoning = existing?.matchReasoning || structuredProfile.matchReasoning;
+
           await tx.update(candidates)
             .set({ 
-              firstName: structuredProfile.firstName,
-              lastName: structuredProfile.lastName,
-              skills: structuredProfile.skills,
-              yearsOfExperience: structuredProfile.yearsOfExperience,
-              matchedVacancyId: structuredProfile.matchedVacancyId,
-              matchScore: structuredProfile.matchScore,
-              matchReasoning: structuredProfile.matchReasoning,
+              firstName: finalFirstName,
+              lastName: finalLastName,
+              skills: finalSkills,
+              yearsOfExperience: finalExperience,
+              matchedVacancyId: finalVacancyId,
+              matchScore: finalScore,
+              matchReasoning: finalReasoning,
               status: 'PENDING_APPROVAL' 
             })
             .where(eq(candidates.id, candidateId));

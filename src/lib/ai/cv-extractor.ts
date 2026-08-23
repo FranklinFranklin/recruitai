@@ -15,11 +15,26 @@ export interface ExtractedCandidateProfile {
 }
 
 const COMMON_SKILLS = [
+  // Tech & Engineering
   'JavaScript', 'TypeScript', 'React', 'Next.js', 'Node.js', 'Python', 'Java', 'C#', '.NET',
   'PHP', 'Ruby', 'Go', 'Rust', 'Swift', 'Kotlin', 'SQL', 'PostgreSQL', 'MySQL', 'MongoDB',
   'AWS', 'Azure', 'GCP', 'Docker', 'Kubernetes', 'CI/CD', 'Git', 'HTML', 'CSS', 'Tailwind',
-  'Vue', 'Angular', 'GraphQL', 'REST API', 'Linux', 'Agile', 'Scrum', 'DevOps', 'Terraform',
-  'Spring Boot', 'Django', 'FastAPI', 'Figma', 'Product Management', 'Recruitment', 'Sales'
+  'Vue', 'Angular', 'GraphQL', 'REST API', 'Linux', 'DevOps', 'Terraform', 'Spring Boot', 'Django', 'FastAPI', 'Figma',
+  
+  // Logistics, Supply Chain & Operations
+  'Logistiek', 'Logistics', 'Supply Chain', 'WMS', 'TMS', 'Voorraadbeheer', 'Inventory Management',
+  'Transport', 'Distributie', 'Warehousing', 'Planning', 'Orderpicking', 'Expeditie', 'Inkoop',
+  'Procurement', 'ERP', 'SAP', 'AS400', 'Excel', 'Lean', 'Six Sigma', '5S', 'VCA', 'Veiligheid',
+  
+  // Finance & Accounting
+  'Finance', 'Financial Analysis', 'Financieel', 'Accounting', 'Boekhouding', 'Controlling',
+  'Budgeting', 'Reporting', 'Jaarrekening', 'Auditing', 'Fiscaliteit', 'Tax', 'Exact', 'AFAS',
+  'Navision', 'Power BI', 'KPI', 'IFRS', 'Credit Management',
+  
+  // Business, HR & Management
+  'Project Management', 'Product Management', 'Stakeholder Management', 'Agile', 'Scrum',
+  'Change Management', 'Recruitment', 'HR', 'Sales', 'Account Management', 'Communicatie',
+  'Customer Service', 'Klantenservice'
 ];
 
 export async function extractCandidateProfile(

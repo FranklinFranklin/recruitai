@@ -109,17 +109,11 @@ export default function ViewCvButton({ url, candidateName }: { url: string; cand
             {/* PDF Viewer */}
             <div className="flex-1 w-full h-full bg-slate-100 dark:bg-slate-950 p-2 md:p-4 overflow-hidden flex items-center justify-center">
               {blobUrl ? (
-                <object 
-                  data={`${blobUrl}#view=FitH`} 
-                  type="application/pdf"
-                  className="w-full h-full rounded-xl bg-white shadow-sm"
-                >
-                  <iframe 
-                    src={`${blobUrl}#view=FitH`} 
-                    className="w-full h-full border-0 rounded-xl bg-white shadow-sm"
-                    title="Candidate CV Document"
-                  />
-                </object>
+                <iframe 
+                  src={`${blobUrl}#view=FitH`} 
+                  className="w-full h-full border-0 rounded-xl bg-white shadow-sm"
+                  title="Candidate CV Document"
+                />
               ) : (
                 <div className="bg-white dark:bg-slate-800 p-8 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 max-w-md text-center flex flex-col items-center gap-4">
                   <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
