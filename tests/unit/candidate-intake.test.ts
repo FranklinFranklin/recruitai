@@ -66,31 +66,31 @@ describe('processCandidateIntake', () => {
 
   it('should reject phone and contact numbers from being extracted as job titles', () => {
     const cvWithContact = `
-      Franklin Santos
-      Telefoon: 06 - 27257712  E-mail: franklin@example.com
+      Jan Jansen
+      Telefoon: 06 - 12345678  E-mail: jan.jansen@example.com
       Logistics Coordinator
       Werkervaring: 2021 - heden
     `;
     const title = extractJobTitle(cvWithContact);
-    expect(title).not.toContain('27257712');
+    expect(title).not.toContain('12345678');
     expect(title).toBe('Logistics Coordinator');
   });
 
   it('should strip 4-digit years from candidate names in filenames', () => {
-    const { firstName, lastName } = extractNameHeuristic('', 'CV_Franklin_Santos_2025.pdf');
-    expect(firstName).toBe('Franklin');
-    expect(lastName).toBe('Santos');
+    const { firstName, lastName } = extractNameHeuristic('', 'CV_Jan_Jansen_2025.pdf');
+    expect(firstName).toBe('Jan');
+    expect(lastName).toBe('Jansen');
   });
 
   it('should accurately extract name, job title, skills, and experience from Dutch ICT tabular CV', () => {
     const cvText = `
       Curriculum Vitae
       Persoonlijke gegevens
-      Voorletters en voornaam Franklin Santos
+      Voorletters en voornaam Jan Jansen
       Geboortedatum 2 oktober 1984
       Plaats Rotterdam
-      Telefoonnummer 06 - 27257712
-      E-mailadres dhr.Franklin@gmail.com
+      Telefoonnummer 06 - 12345678
+      E-mailadres jan.jansen@example.com
       
       Opleidingen/Certificaten 
       Opleiding Diploma Periode
@@ -104,13 +104,13 @@ describe('processCandidateIntake', () => {
       
       Werkervaring 
       Functie Werkgever Periode
-      Senior Medewerker ICT Star-shl 2023 – Heden
+      Senior Medewerker ICT Voorbeeld Bedrijf 2023 – Heden
       Collega’s helpen met hun ICT-vragen en werkplekbeheer.
       Programma’s: Citrix Director, SCCM, Azure, O365, Active Directory, Jira, PHP, React
     `;
     const { firstName, lastName } = extractNameHeuristic(cvText);
-    expect(firstName).toBe('Franklin');
-    expect(lastName).toBe('Santos');
+    expect(firstName).toBe('Jan');
+    expect(lastName).toBe('Jansen');
 
     const title = extractJobTitle(cvText);
     expect(title).toBe('Senior Medewerker ICT');
@@ -126,21 +126,21 @@ describe('processCandidateIntake', () => {
 
   it('should extract last job title when filename has no title and CV has explicit Functie label', () => {
     const cvText = `
-      Franklin Santos
+      Jan Jansen
       Werkervaring
       Functie: Senior Medewerker ICT
-      Werkgever: Star-shl
+      Werkgever: Voorbeeld Bedrijf
       Periode: 2023 - heden
     `;
-    const title = extractJobTitle(cvText, 'Franklin_Santos_CV.pdf');
+    const title = extractJobTitle(cvText, 'Jan_Jansen_CV.pdf');
     expect(title).toBe('Senior Medewerker ICT');
   });
 
   it('should extract last job title from Werkervaring table row when filename is generic', () => {
     const cvText = `
-      Franklin Santos
+      Jan Jansen
       Werkervaring
-      Senior Medewerker ICT Star-shl 2023 – Heden
+      Senior Medewerker ICT Voorbeeld Bedrijf 2023 – Heden
     `;
     const title = extractJobTitle(cvText, 'CV_2025.pdf');
     expect(title).toBe('Senior Medewerker ICT');
