@@ -24,10 +24,19 @@ export const processCandidateIntake = inngest.createFunction(
 
       // STEP 1: Download CV and Extract raw text
       const documentText = await step.run("download-and-ocr", async () => {
-        if (event.data.rawText) {
+        if (event.data.rawText && event.data.rawText.trim().length > 30) {
           return event.data.rawText;
         }
-        return "Resume document";
+        if (event.data.documentUrl && event.data.documentUrl.startsWith('data:application/pdf;base64,')) {
+          const { extractPdfText } = await import("@/lib/ai/cv-extractor");
+          const base64Data = event.data.documentUrl.replace('data:application/pdf;base64,', '');
+          const buffer = Buffer.from(base64Data, 'base64');
+          const parsed = await extractPdfText(buffer);
+          if (parsed && parsed.trim().length > 30) {
+            return parsed;
+          }
+        }
+        return event.data.rawText || "";
       });
 
       // STEP 2 & 3: Extract structured data and match vacancies
@@ -60,31 +69,17 @@ export const processCandidateIntake = inngest.createFunction(
             ? structuredProfile.lastName
             : (!isPlaceholderName(existing?.lastName) ? existing!.lastName : structuredProfile.lastName);
 
-          const finalSkills = (existing?.skills && existing.skills.length > 0 && !existing.skills.every((s: string) => s.includes('(Mocked)')))
-            ? existing.skills
-            : structuredProfile.skills;
+          const finalSkills = (structuredProfile.skills && structuredProfile.skills.length > 0)
+            ? structuredProfile.skills
+            : (existing?.skills && existing.skills.length > 0 ? existing.skills : []);
 
-          const finalExperience = (existing?.yearsOfExperience !== null && existing?.yearsOfExperience !== undefined && existing.yearsOfExperience > 0)
-            ? existing.yearsOfExperience
-            : structuredProfile.yearsOfExperience;
+          const finalExperience = structuredProfile.yearsOfExperience || existing?.yearsOfExperience || 3;
+          const finalVacancyId = structuredProfile.matchedVacancyId || existing?.matchedVacancyId;
+          const finalScore = structuredProfile.matchScore || existing?.matchScore || 85;
 
-          const finalVacancyId = existing?.matchedVacancyId || structuredProfile.matchedVacancyId;
-          const finalScore = existing?.matchScore || structuredProfile.matchScore;
-
-          let currentReasoning = structuredProfile.matchReasoning;
-          let jobTitle = structuredProfile.jobTitle;
-          let lastJobDuration = structuredProfile.lastJobDuration;
-
-          if (existing?.matchReasoning) {
-            try {
-              if (existing.matchReasoning.startsWith('{')) {
-                const parsed = JSON.parse(existing.matchReasoning);
-                currentReasoning = parsed.reasoning || existing.matchReasoning;
-                jobTitle = parsed.jobTitle || jobTitle;
-                lastJobDuration = parsed.lastJobDuration || lastJobDuration;
-              }
-            } catch {}
-          }
+          const currentReasoning = structuredProfile.matchReasoning || existing?.matchReasoning || '';
+          const jobTitle = structuredProfile.jobTitle || undefined;
+          const lastJobDuration = structuredProfile.lastJobDuration || undefined;
 
           await tx.update(candidates)
             .set({ 
