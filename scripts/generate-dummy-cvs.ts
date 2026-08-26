@@ -849,7 +849,7 @@ async function main() {
       console.log(`✓ Zip package created successfully: ${zipPath} (${archive.pointer()} total bytes)`);
       resolve();
     });
-    archive.on('error', (err) => reject(err));
+    archive.on('error', (err: unknown) => reject(err));
     archive.pipe(zipOutput);
 
     for (const filePath of generatedFiles) {
