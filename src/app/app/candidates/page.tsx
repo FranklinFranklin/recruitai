@@ -30,14 +30,20 @@ export default async function CandidatesPage() {
         } catch {}
       }
 
+      const skillsArray = Array.isArray(c.skills) ? c.skills : [];
+      let resolvedJobTitle = jobTitle || c.jobTitle;
+      if (!resolvedJobTitle || resolvedJobTitle === 'Professional') {
+        resolvedJobTitle = skillsArray.length > 0 ? `${skillsArray[0]} Specialist` : 'Specialist';
+      }
+
       return {
         ...c,
-        jobTitle: jobTitle || c.jobTitle || 'Professional',
+        jobTitle: resolvedJobTitle,
         lastJobDuration: lastJobDuration || c.lastJobDuration,
         matchReasoning: reasoningText,
         createdAt: c.createdAt ? c.createdAt.toISOString() : null,
         resumeUrl: c.resumeUrl || null,
-        skills: Array.isArray(c.skills) ? c.skills : [],
+        skills: skillsArray,
       };
     });
   });

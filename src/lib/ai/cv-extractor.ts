@@ -68,17 +68,22 @@ export async function extractCandidateProfile(
       aiResult && 
       aiResult.firstName && 
       aiResult.firstName !== 'Mock' && 
-      aiResult.firstName !== 'John' &&
+      aiResult.firstName !== 'John' && 
       aiResult.firstName !== 'Processing...' &&
       aiResult.firstName.toLowerCase() !== 'candidate'
     ) {
       const matching = await matchCandidateWithVacancies(aiResult, tenantId);
+      const skills = aiResult.skills && aiResult.skills.length > 0 ? aiResult.skills : extractSkillsHeuristic(rawText);
+      let jobTitle = aiResult.jobTitle || extractJobTitle(rawText, fileName);
+      if (!jobTitle || jobTitle === 'Professional') {
+        jobTitle = skills.length > 0 ? `${skills[0]} Specialist` : 'Specialist';
+      }
       return {
         firstName: aiResult.firstName,
         lastName: aiResult.lastName || '',
-        jobTitle: aiResult.jobTitle || extractJobTitle(rawText, fileName),
+        jobTitle,
         lastJobDuration: aiResult.lastJobDuration || extractLastJobDuration(rawText),
-        skills: aiResult.skills && aiResult.skills.length > 0 ? aiResult.skills : extractSkillsHeuristic(rawText),
+        skills,
         yearsOfExperience: aiResult.yearsOfExperience ?? extractExperienceHeuristic(rawText),
         ...matching
       };
@@ -89,9 +94,12 @@ export async function extractCandidateProfile(
 
   // 2. High-Accuracy Heuristic Extraction directly from document text & filename
   const { firstName, lastName } = extractNameHeuristic(rawText, fileName);
-  const jobTitle = extractJobTitle(rawText, fileName);
-  const lastJobDuration = extractLastJobDuration(rawText);
   const skills = extractSkillsHeuristic(rawText);
+  let jobTitle = extractJobTitle(rawText, fileName);
+  if (!jobTitle || jobTitle === 'Professional') {
+    jobTitle = skills.length > 0 ? `${skills[0]} Specialist` : 'Specialist';
+  }
+  const lastJobDuration = extractLastJobDuration(rawText);
   const yearsOfExperience = extractExperienceHeuristic(rawText);
   const matching = await matchCandidateWithVacancies({ firstName, lastName, skills, yearsOfExperience }, tenantId);
 
@@ -364,8 +372,9 @@ export function isValidJobTitle(title?: string | null): boolean {
     'persoonlijke gegevens', 'persoonsgegevens', 'opleiding', 'education',
     'referentie', 'referenties', 'competenties', 'heden', 'present', 'current',
     'now', 'nu', 'werkervaring', 'ervaring', 'experience', 'vaardigheden',
-    'talen', 'languages', 'januari', 'februari', 'maart', 'april', 'mei',
-    'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'
+    'talen', 'languages', 'werkgever', 'periode', 'organisatie', 'bedrijf',
+    'januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli',
+    'augustus', 'september', 'oktober', 'november', 'december'
   ];
   const lower = clean.toLowerCase();
   if (contactKeywords.some(kw => lower === kw || lower.startsWith(kw + ':') || lower.startsWith(kw + ' -') || lower === kw || (kw.length > 4 && lower.includes(kw)))) {
@@ -417,6 +426,15 @@ export function extractJobTitle(text: string, fileName?: string): string {
     if (line.includes(' | ')) {
       const part = line.split(' | ')[1].trim();
       if (isValidJobTitle(part)) return part;
+    }
+  }
+
+  // 3. Check explicit function/role labels anywhere in document (e.g. "Functie: Senior Medewerker ICT")
+  const explicitMatch = text.match(/(?:functie|functietitel|functieomschrijving|role|job title|positie|huidige functie)\s*[:\-–—\t]+\s*([^\r\n]{3,50})/i);
+  if (explicitMatch) {
+    const candidateRole = explicitMatch[1].replace(/(?:bij|at|@|\(|[-–—]).*$/, '').trim();
+    if (isValidJobTitle(candidateRole)) {
+      return candidateRole;
     }
   }
 

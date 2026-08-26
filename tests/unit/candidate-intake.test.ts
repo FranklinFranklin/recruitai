@@ -123,4 +123,26 @@ describe('processCandidateIntake', () => {
     const duration = extractLastJobDuration(cvText);
     expect(duration).toContain('2023 – Heden');
   });
+
+  it('should extract last job title when filename has no title and CV has explicit Functie label', () => {
+    const cvText = `
+      Franklin Santos
+      Werkervaring
+      Functie: Senior Medewerker ICT
+      Werkgever: Star-shl
+      Periode: 2023 - heden
+    `;
+    const title = extractJobTitle(cvText, 'Franklin_Santos_CV.pdf');
+    expect(title).toBe('Senior Medewerker ICT');
+  });
+
+  it('should extract last job title from Werkervaring table row when filename is generic', () => {
+    const cvText = `
+      Franklin Santos
+      Werkervaring
+      Senior Medewerker ICT Star-shl 2023 – Heden
+    `;
+    const title = extractJobTitle(cvText, 'CV_2025.pdf');
+    expect(title).toBe('Senior Medewerker ICT');
+  });
 });

@@ -29,12 +29,18 @@ export default async function ApprovalsPage() {
         } catch {}
       }
 
+      const skillsArray = Array.isArray(c.skills) ? c.skills : (typeof c.skills === 'string' ? JSON.parse(c.skills || '[]') : []);
+      let resolvedJobTitle = jobTitle || c.jobTitle;
+      if (!resolvedJobTitle || resolvedJobTitle === 'Professional') {
+        resolvedJobTitle = skillsArray.length > 0 ? `${skillsArray[0]} Specialist` : 'Specialist';
+      }
+
       return {
         ...c,
-        jobTitle: jobTitle || c.jobTitle || 'Professional',
+        jobTitle: resolvedJobTitle,
         lastJobDuration: lastJobDuration || c.lastJobDuration || `${c.yearsOfExperience || 3} years (Most Recent Role)`,
         matchReasoning: reasoningText,
-        skills: Array.isArray(c.skills) ? c.skills : (typeof c.skills === 'string' ? JSON.parse(c.skills || '[]') : []),
+        skills: skillsArray,
         createdAt: c.createdAt ? c.createdAt.toISOString() : null,
       };
     });
