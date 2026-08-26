@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { withTenant } from '@/lib/db';
 import { vacancies } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import zlib from 'zlib';
 
 export interface ExtractedCandidateProfile {
   firstName: string;
@@ -14,6 +15,50 @@ export interface ExtractedCandidateProfile {
   matchedVacancyId?: string;
   matchScore: number;
   matchReasoning: string;
+}
+
+export async function extractPdfText(buffer: Buffer): Promise<string> {
+  // Strategy 1: Try PDFParse class instance
+  try {
+    const { PDFParse } = await import('pdf-parse');
+    const parser = new PDFParse({ data: buffer });
+    const textResult = await parser.getText();
+    await parser.destroy();
+    if (textResult?.text && textResult.text.trim().length > 0) {
+      return textResult.text;
+    }
+  } catch (err) {
+    console.warn('[PDF] PDFParse parser failed, attempting fallback extraction:', err);
+  }
+
+  // Strategy 2: Decompress FlateDecode streams from PDF buffer
+  try {
+    const str = buffer.toString('binary');
+    const streamRegex = /stream[\r\n]+([\s\S]*?)[\r\n]+endstream/g;
+    let match: RegExpExecArray | null;
+    let decompressedText = '';
+
+    while ((match = streamRegex.exec(str)) !== null) {
+      const rawStream = Buffer.from(match[1], 'binary');
+      try {
+        const decompressed = zlib.inflateSync(rawStream).toString('latin1');
+        const textMatches = decompressed.match(/\(([^()]+)\)\s*Tj/g) || decompressed.match(/\[(.*?)\]\s*TJ/g);
+        if (textMatches) {
+          decompressedText += ' ' + textMatches.map(m => m.replace(/[()\[\]]/g, '').replace(/Tj|TJ/g, '').trim()).join(' ');
+        }
+      } catch {
+        // Continue to next stream
+      }
+    }
+
+    if (decompressedText.trim().length > 0) {
+      return decompressedText.trim();
+    }
+  } catch (err) {
+    console.warn('[PDF] Flate decompress fallback failed:', err);
+  }
+
+  return '';
 }
 
 const COMMON_SKILLS = [

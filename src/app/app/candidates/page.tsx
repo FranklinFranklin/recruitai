@@ -8,6 +8,8 @@ import Link from 'next/link';
 import ViewCvButton from '../approvals/ViewCvButton';
 import RealtimeRefresher from '../RealtimeRefresher';
 
+import { extractCandidateProfile, extractPdfText } from '@/lib/ai/cv-extractor';
+
 export default async function CandidatesPage() {
   const fullDict = await getDictionary();
   const dict = fullDict.candidates;
@@ -16,7 +18,7 @@ export default async function CandidatesPage() {
   // Securely query candidates only for this tenant using RLS
   const allCandidates = await withTenant(activeTenantId, async (tx) => {
     const raw = await tx.select().from(candidates).orderBy(desc(candidates.createdAt));
-    return raw.map((c: any) => {
+    return await Promise.all(raw.map(async (c: any) => {
       let reasoningText = c.matchReasoning || '';
       let jobTitle = undefined;
       let lastJobDuration = undefined;
@@ -30,10 +32,45 @@ export default async function CandidatesPage() {
         } catch {}
       }
 
-      const skillsArray = Array.isArray(c.skills) ? c.skills : [];
+      let skillsArray = Array.isArray(c.skills) ? c.skills : [];
       let resolvedJobTitle = jobTitle || c.jobTitle;
-      if (!resolvedJobTitle || resolvedJobTitle === 'Professional') {
-        resolvedJobTitle = skillsArray.length > 0 ? `${skillsArray[0]} Specialist` : 'Specialist';
+
+      // Auto-heal / Refresh candidates with outdated legacy extraction
+      if (
+        (!resolvedJobTitle || resolvedJobTitle === 'Professional' || resolvedJobTitle === 'Go Specialist' || (skillsArray.length <= 2 && skillsArray.includes('Go'))) &&
+        c.resumeUrl && c.resumeUrl.startsWith('data:application/pdf;base64,')
+      ) {
+        try {
+          const base64Data = c.resumeUrl.replace('data:application/pdf;base64,', '');
+          const buffer = Buffer.from(base64Data, 'base64');
+          const pdfText = await extractPdfText(buffer);
+          if (pdfText && pdfText.length > 50) {
+            const reExtracted = await extractCandidateProfile(pdfText, activeTenantId);
+            if (reExtracted && reExtracted.jobTitle && reExtracted.jobTitle !== 'Professional' && reExtracted.jobTitle !== 'Go Specialist') {
+              resolvedJobTitle = reExtracted.jobTitle;
+              skillsArray = reExtracted.skills;
+              lastJobDuration = reExtracted.lastJobDuration;
+              reasoningText = reExtracted.matchReasoning;
+
+              await tx.update(candidates).set({
+                skills: skillsArray,
+                yearsOfExperience: reExtracted.yearsOfExperience,
+                matchScore: reExtracted.matchScore,
+                matchReasoning: JSON.stringify({
+                  reasoning: reasoningText,
+                  jobTitle: resolvedJobTitle,
+                  lastJobDuration: lastJobDuration,
+                }),
+              }).where(eq(candidates.id, c.id));
+            }
+          }
+        } catch (healErr) {
+          console.warn('[Candidates] Auto-heal candidate extraction failed:', healErr);
+        }
+      }
+
+      if (!resolvedJobTitle || resolvedJobTitle === 'Professional' || resolvedJobTitle === 'Go Specialist') {
+        resolvedJobTitle = skillsArray.length > 0 && skillsArray[0] !== 'Go' ? `${skillsArray[0]} Specialist` : 'Senior Medewerker ICT';
       }
 
       return {
@@ -45,7 +82,7 @@ export default async function CandidatesPage() {
         resumeUrl: c.resumeUrl || null,
         skills: skillsArray,
       };
-    });
+    }));
   });
 
   if (allCandidates.length === 0) {
