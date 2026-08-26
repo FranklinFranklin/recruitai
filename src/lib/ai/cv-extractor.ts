@@ -386,8 +386,9 @@ export function extractExperienceHeuristic(text: string): number {
 export function isValidJobTitle(title?: string | null): boolean {
   if (!title || typeof title !== 'string') return false;
   const clean = title.trim();
-  if (clean.length < 3 || clean.length > 60) return false;
+  if (clean.length < 3 || clean.length > 50) return false;
   if (/\d{2,}/.test(clean)) return false;
+  if (/\b(?:en\s+het|en\s+de|van\s+het|voor\s+het|met\s+het|in\s+het|op\s+het|and\s+the|of\s+the|for\s+the|verbeteren|ontwikkelen|beheren|onderhouden|opzetten|providing|responsible)\b/i.test(clean)) return false;
 
   const ignored = [
     'email', 'e-mail', 'tel', 'telefoon', 'mobiel', 'phone',
@@ -442,7 +443,7 @@ export function extractJobTitle(text: string, fileName?: string, candidateName?:
 
   // 2. Look for subtitle immediately beneath candidate name anywhere in CV
   if (candidateName && text) {
-    const nameRegex = new RegExp(candidateName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    const nameRegex = new RegExp('^\\s*' + candidateName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*$', 'im');
     const nameMatch = text.match(nameRegex);
     if (nameMatch && nameMatch.index !== undefined) {
       const postName = text.slice(nameMatch.index + nameMatch[0].length, nameMatch.index + 300);
@@ -462,18 +463,18 @@ export function extractJobTitle(text: string, fileName?: string, candidateName?:
     for (const line of headerLines) {
       if (line.includes(' - ')) {
         const parts = line.split(' - ').map(p => p.trim());
-        if (isValidJobTitle(line)) return line;
         if (isValidJobTitle(parts[1])) return parts[1];
+        if (isValidJobTitle(line)) return line;
       }
       if (line.includes(' – ')) {
         const parts = line.split(' – ').map(p => p.trim());
-        if (isValidJobTitle(line)) return line;
         if (isValidJobTitle(parts[1])) return parts[1];
+        if (isValidJobTitle(line)) return line;
       }
       if (line.includes(' | ')) {
         const parts = line.split(' | ').map(p => p.trim());
-        if (isValidJobTitle(line)) return line;
         if (isValidJobTitle(parts[1])) return parts[1];
+        if (isValidJobTitle(line)) return line;
       }
     }
   }
