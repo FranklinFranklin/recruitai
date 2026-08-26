@@ -7,76 +7,7 @@ import { inngest } from './client';
 import { eq } from 'drizzle-orm';
 import { logAudit } from '@/lib/db/audit';
 
-import zlib from 'zlib';
-
-async function extractPdfText(buffer: Buffer): Promise<string> {
-  // Strategy 1: Try PDFParse class instance
-  try {
-    const { PDFParse } = await import('pdf-parse');
-    const parser = new PDFParse({ data: buffer });
-    const textResult = await parser.getText();
-    await parser.destroy();
-    if (textResult?.text && textResult.text.trim().length > 0) {
-      return textResult.text;
-    }
-  } catch (err) {
-    console.warn("[PDF] PDFParse parser failed, attempting fallback extraction:", err);
-  }
-
-  // Strategy 2: Decompress FlateDecode streams from PDF buffer
-  try {
-    const str = buffer.toString('binary');
-    const streamRegex = /stream[\r\n]+([\s\S]*?)[\r\n]+endstream/g;
-    let match: RegExpExecArray | null;
-    let decompressedText = '';
-
-    while ((match = streamRegex.exec(str)) !== null) {
-      const rawStream = Buffer.from(match[1], 'binary');
-      try {
-        const decompressed = zlib.inflateSync(rawStream).toString('latin1');
-        const textMatches = decompressed.match(/\(([^()]+)\)\s*Tj/g) || decompressed.match(/\[(.*?)\]\s*TJ/g);
-        if (textMatches) {
-          decompressedText += ' ' + textMatches.map(m => m.replace(/[()\[\]]/g, '').replace(/Tj|TJ/g, '').trim()).join(' ');
-        }
-      } catch {
-        // Not a standard flate stream, continue
-      }
-    }
-
-    if (decompressedText.trim().length > 0) {
-      return decompressedText.trim();
-    }
-  } catch (err) {
-    console.warn("[PDF] Flate decompress fallback failed:", err);
-  }
-
-  // Strategy 3: Direct text stream extraction
-  try {
-    const raw = buffer.toString('latin1');
-    const matches = raw.match(/\(([^()]+)\)\s*Tj/g) || raw.match(/\[(.*?)\]\s*TJ/g);
-    if (matches && matches.length > 0) {
-      const extracted = matches
-        .map(m => m.replace(/[()\[\]]/g, '').replace(/Tj|TJ/g, '').trim())
-        .filter(Boolean)
-        .join(' ');
-      if (extracted.trim().length > 0) {
-        return extracted;
-      }
-    }
-
-    // Strategy 4: Printable ASCII / Latin text extraction
-    const printable = raw.replace(/[^\x20-\x7E\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim();
-    if (printable.length > 50) {
-      return printable;
-    }
-  } catch (err) {
-    console.error("[PDF] Text stream fallback failed:", err);
-  }
-
-  return "";
-}
-
-import { extractCandidateProfile } from '@/lib/ai/cv-extractor';
+import { extractPdfText, extractCandidateProfile } from '@/lib/ai/cv-extractor';
 
 export async function uploadCandidateCV(formData: FormData) {
   const { activeTenantId, user } = await requireTenantMember();

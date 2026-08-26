@@ -35,9 +35,9 @@ export default async function CandidatesPage() {
       let skillsArray = Array.isArray(c.skills) ? c.skills : [];
       let resolvedJobTitle = jobTitle || c.jobTitle;
 
-      // Auto-heal / Refresh candidates with outdated legacy extraction
+      // Auto-heal / Refresh candidates with outdated legacy extraction or empty skills
       if (
-        (!resolvedJobTitle || resolvedJobTitle === 'Professional' || resolvedJobTitle.includes('Specialist') || (skillsArray.length <= 3 && (skillsArray.includes('Problem Solving') || skillsArray.includes('Go')))) &&
+        (!resolvedJobTitle || resolvedJobTitle === 'Professional' || resolvedJobTitle.includes('Specialist') || skillsArray.length === 0 || (skillsArray.length <= 3 && (skillsArray.includes('Problem Solving') || skillsArray.includes('Go')))) &&
         c.resumeUrl && c.resumeUrl.startsWith('data:application/pdf;base64,')
       ) {
         try {
