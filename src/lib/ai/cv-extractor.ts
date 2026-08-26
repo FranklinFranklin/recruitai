@@ -24,14 +24,14 @@ export async function extractPdfText(buffer: Buffer): Promise<string> {
     const parser = new PDFParse({ data: buffer });
     const textResult = await parser.getText();
     await parser.destroy();
-    if (textResult?.text && textResult.text.trim().length > 0) {
+    if (textResult?.text && textResult.text.trim().length > 50) {
       return textResult.text;
     }
   } catch (err) {
     console.warn('[PDF] PDFParse parser failed, attempting fallback extraction:', err);
   }
 
-  // Strategy 2: Decompress FlateDecode streams from PDF buffer
+  // Strategy 2: Decompress FlateDecode streams from PDF buffer (with proper TJ kerning handling)
   try {
     const str = buffer.toString('binary');
     const streamRegex = /stream[\r\n]+([\s\S]*?)[\r\n]+endstream/g;
@@ -42,16 +42,29 @@ export async function extractPdfText(buffer: Buffer): Promise<string> {
       const rawStream = Buffer.from(match[1], 'binary');
       try {
         const decompressed = zlib.inflateSync(rawStream).toString('latin1');
-        const textMatches = decompressed.match(/\(([^()]+)\)\s*Tj/g) || decompressed.match(/\[(.*?)\]\s*TJ/g);
-        if (textMatches) {
-          decompressedText += ' ' + textMatches.map(m => m.replace(/[()\[\]]/g, '').replace(/Tj|TJ/g, '').trim()).join(' ');
+        
+        // 1. Extract text from TJ arrays: only extract characters inside parentheses (...)
+        const tjRegex = /\[(.*?)\]\s*TJ/g;
+        let tjMatch: RegExpExecArray | null;
+        while ((tjMatch = tjRegex.exec(decompressed)) !== null) {
+          const parts = tjMatch[1].match(/\(([^()]*)\)/g);
+          if (parts) {
+            decompressedText += parts.map(p => p.slice(1, -1)).join('') + '\n';
+          }
+        }
+
+        // 2. Extract text from single Tj operators
+        const singleTjRegex = /\(([^()]*)\)\s*Tj/g;
+        let sMatch: RegExpExecArray | null;
+        while ((sMatch = singleTjRegex.exec(decompressed)) !== null) {
+          decompressedText += sMatch[1] + '\n';
         }
       } catch {
         // Continue to next stream
       }
     }
 
-    if (decompressedText.trim().length > 0) {
+    if (decompressedText.trim().length > 30) {
       return decompressedText.trim();
     }
   } catch (err) {
@@ -291,8 +304,10 @@ export function extractSkillsHeuristic(text: string): string[] {
     // Split items by commas, bullets, pipes, or semicolons
     const items = line.split(/[,•|/;\t]/).map(s => s.trim()).filter(s => s.length >= 2 && s.length <= 45);
     for (const item of items) {
-      // Remove rating/level notes like "(Uitstekend)", "(Goed)", "(Ja)"
+      // Remove rating/level notes like "(Uitstekend)", "(Goed)", "(Ja)", trailing slashes, and label prefixes
       const clean = item
+        .replace(/\\+$/g, '')
+        .replace(/^(?:taal|language)\s*[:\-–—\s]+/i, '')
         .replace(/\s*\((?:uitstekend|goed|vloeiend|native|fluent|ja|nee|mbo|hbo|wo|level \d+)\)/i, '')
         .replace(/^[•\-\*]\s*/, '')
         .trim();
@@ -301,7 +316,7 @@ export function extractSkillsHeuristic(text: string): string[] {
         clean && 
         clean.length >= 2 && 
         clean.length <= 40 && 
-        !/^(?:ervaring|periode|diploma|niveau|level|ja|nee|overige|certificaten|taal|nederlands|engels|frans|duits|spaans)$/i.test(clean) &&
+        !/^(?:ervaring|periode|diploma|niveau|level|ja|nee|overige|certificaten|taal|nederlands|engels|frans|duits|spaans|programma)$/i.test(clean) &&
         !foundSkills.includes(clean)
       ) {
         foundSkills.push(clean);
