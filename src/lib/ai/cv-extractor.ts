@@ -283,43 +283,69 @@ export function extractNameHeuristic(text: string, fileName?: string): { firstNa
 export function extractSkillsHeuristic(text: string): string[] {
   if (!text) return [];
 
-  // Look for skills section header anywhere in the CV
-  const match = text.match(/\b(?:skills|vaardigheden|competenties|programmeertaal|programma(?:['’]s|s)?|deskundigheid|expertise|technical skills|kerncompetenties)\b/i);
-  if (!match || match.index === undefined) return [];
-
-  const slice = text.slice(match.index, match.index + 900);
-  const lines = slice.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-  const endSectionRegex = /^(?:languages|talen|education|opleiding|werkervaring|work experience|profile|profiel|interests|interesses|over mij|contact|personalia|referenties|references|overige)/i;
-
   const foundSkills: string[] = [];
+  const proseFilter = /^(?:zoals|vragen|taken|systemen|samenwerken|draaien|het|een|van|voor|met|binnen|betrokken|ervaring|periode|diploma|niveau|level|ja|nee|overige|certificaten|taal|nederlands|engels|frans|duits|spaans|nauwkeurigheid|doelgericht|mondeling|schriftelijk|uitstekend|goed|vloeiend|native|fluent|hospital|utrecht|amsterdam|rotterdam|cape town|south africa|university)\b/i;
 
-  for (let i = 0; i < lines.length; i++) {
-    const rawLine = lines[i];
-    if (i > 0 && endSectionRegex.test(rawLine)) break;
-    
-    // Strip leading label artifacts like "Programma's:", "Tools:", "Skills:"
-    const line = rawLine.replace(/^(?:programma(?:['’]s|s)?|skills|vaardigheden|programmeertaal|tools|competenties)?\s*[:\-–—\s]+/i, '').trim();
-    if (!line || /^(?:skills|vaardigheden|competenties|tools)$/i.test(line)) continue;
+  // 1. Check designated skills section FIRST (SKILLS, VAARDIGHEDEN, COMPETENTIES, etc.)
+  const match = text.match(/\b(?:skills\s*(?:&|en)?\s*expertise|skills|vaardigheden|competenties|programmeertaal|programma(?:['’]s|s)?|deskundigheid|expertise|technical skills|kerncompetenties)\b/i);
+  if (match && match.index !== undefined) {
+    const slice = text.slice(match.index, match.index + 900);
+    const lines = slice.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const endSectionRegex = /^(?:languages|l\s*an\s*guages|talen|education|opleiding|werkervaring|work experience|profile|profiel|interests|interesses|over mij|contact|personalia|referenties|references|overige)/i;
 
-    // Split items by commas, bullets, pipes, or semicolons
-    const items = line.split(/[,•|/;\t]/).map(s => s.trim()).filter(s => s.length >= 2 && s.length <= 45);
-    for (const item of items) {
-      // Remove rating/level notes like "(Uitstekend)", "(Goed)", "(Ja)", trailing slashes, and label prefixes
-      const clean = item
-        .replace(/\\+$/g, '')
-        .replace(/^(?:taal|language)\s*[:\-–—\s]+/i, '')
-        .replace(/\s*\((?:uitstekend|goed|vloeiend|native|fluent|ja|nee|mbo|hbo|wo|level \d+)\)/i, '')
-        .replace(/^[•\-\*]\s*/, '')
-        .trim();
+    for (let i = 0; i < lines.length; i++) {
+      const rawLine = lines[i];
+      if (i > 0 && endSectionRegex.test(rawLine)) break;
+      
+      // Strip leading label artifacts like "Programma's:", "Tools:", "Skills:"
+      const line = rawLine.replace(/^(?:programma(?:['’]s|s)?|skills|vaardigheden|programmeertaal|tools|competenties)?\s*[:\-–—\s]+/i, '').trim();
+      if (!line || /^(?:skills|vaardigheden|competenties|tools)$/i.test(line)) continue;
 
-      if (
-        clean && 
-        clean.length >= 2 && 
-        clean.length <= 40 && 
-        !/^(?:ervaring|periode|diploma|niveau|level|ja|nee|overige|certificaten|taal|nederlands|engels|frans|duits|spaans|programma)$/i.test(clean) &&
-        !foundSkills.includes(clean)
-      ) {
-        foundSkills.push(clean);
+      // Split items by commas, bullets, pipes, slashes, or semicolons
+      const items = line.split(/[,•|/;\t]/).map(s => s.trim()).filter(Boolean);
+
+      for (const item of items) {
+        const clean = item
+          .replace(/\\+$/g, '')
+          .replace(/^(?:taal|language|framework)\s*[:\-–—\s]+/i, '')
+          .replace(/\s*\((?:uitstekend|goed|vloeiend|native|fluent|ja|nee|mbo|hbo|wo|level \d+)\)/i, '')
+          .replace(/^[•\-\*]\s*/, '')
+          .trim();
+
+        if (
+          clean && 
+          clean.length >= 2 && 
+          clean.length <= 40 && 
+          !proseFilter.test(clean) &&
+          !foundSkills.includes(clean)
+        ) {
+          foundSkills.push(clean);
+        }
+      }
+    }
+  }
+
+  // 2. If fewer than 5 skills found, supplement with technical tools from work experience
+  if (foundSkills.length < 5) {
+    const expMatch = text.match(/\b(?:work experience|werkervaring|arbeidsverleden|loopbaan)\b/i);
+    if (expMatch && expMatch.index !== undefined) {
+      const expSlice = text.slice(expMatch.index, expMatch.index + 1200);
+      const lines = expSlice.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      for (const raw of lines) {
+        if (raw.includes(',') && !proseFilter.test(raw) && !/^(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|19|20\d\d)/i.test(raw)) {
+          const items = raw.split(/[,•|/;\t]/).map(s => s.trim()).filter(Boolean);
+          for (const item of items) {
+            const clean = item
+              .replace(/\\+$/g, '')
+              .replace(/^(?:programma(?:['’]s|s)?|taal|language)\s*[:\-–—\s]+/i, '')
+              .replace(/\s*\((?:uitstekend|goed|vloeiend|native|fluent|ja|nee|mbo|hbo|wo|level \d+)\)/i, '')
+              .replace(/^[•\-\*]\s*/, '')
+              .trim();
+            if (clean.length >= 2 && clean.length <= 35 && !proseFilter.test(clean) && !foundSkills.includes(clean)) {
+              foundSkills.push(clean);
+            }
+          }
+        }
       }
     }
   }
@@ -387,7 +413,7 @@ export function isValidJobTitle(title?: string | null): boolean {
  * Extracts the candidate's job title directly from the CV text.
  * Strategy 1: Filename with explicit title separator.
  * Strategy 2: Subtitle immediately beneath the candidate's name anywhere in the document (2-column layout safe).
- * Strategy 3: Job title of the most recent role under WORK EXPERIENCE / WERKERVARING.
+ * Strategy 3: Job title of the most recent role under WORK EXPERIENCE / WERKERVARING (multi-line column safe).
  * If not found in the CV, returns undefined (no artificial fallbacks).
  */
 export function extractJobTitle(text: string, fileName?: string, candidateName?: string): string | undefined {
@@ -452,12 +478,40 @@ export function extractJobTitle(text: string, fileName?: string, candidateName?:
     }
   }
 
-  // 4. First entry under WORK EXPERIENCE / WERKERVARING
+  // 4. First entry under WORK EXPERIENCE / WERKERVARING (with multi-line column merging)
   if (text) {
     const expMatch = text.match(/\b(?:work experience|werkervaring|arbeidsverleden|loopbaan|ervaring|professional experience)\b/i);
     if (expMatch && expMatch.index !== undefined) {
       const expSlice = text.slice(expMatch.index + expMatch[0].length, expMatch.index + 800);
       const lines = expSlice.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      
+      // Filter out header column labels
+      const roleLines = lines.filter(l => !/^(?:functie\s+werkgever|werkervaring|work experience|functie|werkgever|periode|bedrijf)$/i.test(l));
+      
+      // Check if top lines form a multi-line title (e.g. "Senior \n Medewerker \n ICT")
+      const multiLineTokens: string[] = [];
+      for (let i = 0; i < Math.min(roleLines.length, 4); i++) {
+        const l = roleLines[i];
+        if (/^(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|19|20\d\d|heden|present|nu|current|now)\b/i.test(l)) break;
+        if (/^(?:vragen|taken|verantwoordelijk|systemen|draaien|samenwerken)\b/i.test(l)) break;
+        multiLineTokens.push(l);
+      }
+      
+      if (multiLineTokens.length > 0) {
+        let combined = multiLineTokens.join(' ').replace(/^(?:functie|role|job title|positie)\s*[:\-–—\t]+/i, '').replace(/\s+/g, ' ').trim();
+        // Strip company if separated by "bij", "at", "@", "|", " - ", " – "
+        combined = combined.split(/\s+(?:bij|at|@|\bvan\b|voor)\s+/i)[0].trim();
+        
+        // Extract up to common role ending
+        const roleEndingMatch = combined.match(/^(.+\b(?:ict|developer|engineer|nurse|coordinator|coördinator|medewerker|beheerder|analist|analyst|manager|specialist|adviseur|assistent|planner|directeur|supervisor|officer|administrator|architect|designer|chauffeur|recruiter)\b)/i);
+        if (roleEndingMatch && isValidJobTitle(roleEndingMatch[1])) {
+          return roleEndingMatch[1].trim();
+        }
+        if (isValidJobTitle(combined)) {
+          return combined;
+        }
+      }
+
       for (const line of lines.slice(0, 5)) {
         // Check explicit Functie: label
         const explicitRole = line.match(/^(?:functie|role|job title|positie)\s*[:\-–—\t]+\s*(.+)$/i);
