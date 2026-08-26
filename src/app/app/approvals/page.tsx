@@ -34,9 +34,9 @@ export default async function ApprovalsPage() {
       let skillsArray = Array.isArray(c.skills) ? c.skills : (typeof c.skills === 'string' ? JSON.parse(c.skills || '[]') : []);
       let resolvedJobTitle = jobTitle || c.jobTitle;
 
-      // Auto-heal / Refresh candidates with outdated legacy extraction (e.g. Go Specialist / Professional / Go & 5S)
+      // Auto-heal / Refresh candidates with outdated legacy extraction (e.g. Go Specialist / Problem Solving Specialist / Professional)
       if (
-        (!resolvedJobTitle || resolvedJobTitle === 'Professional' || resolvedJobTitle === 'Go Specialist' || (skillsArray.length <= 2 && skillsArray.includes('Go'))) &&
+        (!resolvedJobTitle || resolvedJobTitle === 'Professional' || resolvedJobTitle.includes('Specialist') || (skillsArray.length <= 3 && (skillsArray.includes('Problem Solving') || skillsArray.includes('Go')))) &&
         c.resumeUrl && c.resumeUrl.startsWith('data:application/pdf;base64,')
       ) {
         try {
@@ -45,7 +45,7 @@ export default async function ApprovalsPage() {
           const pdfText = await extractPdfText(buffer);
           if (pdfText && pdfText.length > 50) {
             const reExtracted = await extractCandidateProfile(pdfText, activeTenantId);
-            if (reExtracted && reExtracted.jobTitle && reExtracted.jobTitle !== 'Professional' && reExtracted.jobTitle !== 'Go Specialist') {
+            if (reExtracted) {
               resolvedJobTitle = reExtracted.jobTitle;
               skillsArray = reExtracted.skills;
               lastJobDuration = reExtracted.lastJobDuration;
@@ -58,7 +58,7 @@ export default async function ApprovalsPage() {
                 matchScore: reExtracted.matchScore,
                 matchReasoning: JSON.stringify({
                   reasoning: reasoningText,
-                  jobTitle: resolvedJobTitle,
+                  jobTitle: resolvedJobTitle || null,
                   lastJobDuration: lastJobDuration,
                 }),
               }).where(eq(candidates.id, c.id));
@@ -69,13 +69,13 @@ export default async function ApprovalsPage() {
         }
       }
 
-      if (!resolvedJobTitle || resolvedJobTitle === 'Professional' || resolvedJobTitle === 'Go Specialist') {
-        resolvedJobTitle = skillsArray.length > 0 && skillsArray[0] !== 'Go' ? `${skillsArray[0]} Specialist` : 'Senior Medewerker ICT';
+      if (resolvedJobTitle === 'Professional' || resolvedJobTitle === 'Specialist' || resolvedJobTitle === 'Problem Solving Specialist' || resolvedJobTitle === 'Go Specialist') {
+        resolvedJobTitle = undefined;
       }
 
       return {
         ...c,
-        jobTitle: resolvedJobTitle,
+        jobTitle: resolvedJobTitle || undefined,
         lastJobDuration: lastJobDuration || c.lastJobDuration || `${c.yearsOfExperience || 3} years (Most Recent Role)`,
         matchReasoning: reasoningText,
         skills: skillsArray,
