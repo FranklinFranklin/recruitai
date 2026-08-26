@@ -73,8 +73,24 @@ export default async function ApprovalsPage() {
         resolvedJobTitle = undefined;
       }
 
+      let cleanFirstName = c.firstName || '';
+      let cleanLastName = c.lastName || '';
+      const titleWordsPattern = /\b(?:Business Partner|Corporate Recruiter|Full Stack Developer|Solutions Architect|Product Designer|Financieel Controller|Supply Chain Manager|Security Engineer|Growth Specialist|Customer Success Manager|Manager|Developer|Engineer|Architect|Consultant|Specialist|Adviseur|Coordinator|Coördinator|Recruiter|Analist|Analyst)\b/gi;
+
+      if (titleWordsPattern.test(cleanLastName)) {
+        if (!resolvedJobTitle) {
+          const matchedTitles = cleanLastName.match(titleWordsPattern);
+          if (matchedTitles && matchedTitles.length > 0) {
+            resolvedJobTitle = matchedTitles.join(' ').trim();
+          }
+        }
+        cleanLastName = cleanLastName.replace(titleWordsPattern, '').replace(/\s+/g, ' ').trim();
+      }
+
       return {
         ...c,
+        firstName: cleanFirstName,
+        lastName: cleanLastName,
         jobTitle: resolvedJobTitle || undefined,
         lastJobDuration: lastJobDuration || c.lastJobDuration || `${c.yearsOfExperience || 3} years (Most Recent Role)`,
         matchReasoning: reasoningText,

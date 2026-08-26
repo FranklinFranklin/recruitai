@@ -154,7 +154,7 @@ export function extractNameFromFilename(filename: string): { firstName: string; 
   
   const ignoreWords = new Set([
     'cv', 'curriculum', 'vitae', 'resume', 'profile', 'profiel',
-    'financieel', 'financiele', 'financial', 'analyst', 'analist',
+    'financieel', 'financiele', 'financial', 'analyst', 'analist', 'controller',
     'software', 'engineer', 'developer', 'ontwikkelaar',
     'senior', 'junior', 'medior', 'lead', 'manager', 'consultant',
     'frontend', 'backend', 'fullstack', 'full', 'stack', 'document',
@@ -163,7 +163,9 @@ export function extractNameFromFilename(filename: string): { firstName: string; 
     'officer', 'planner', 'directeur', 'director', 'hoofd', 'head',
     'hr', 'recruiter', 'recruitment', 'accountant', 'designer', 'architect',
     'sales', 'marketing', 'operations', 'chauffeur', 'magazijn', 'magazijnmedewerker',
-    'nurse', 'registered', 'verpleegkundige', 'arts', 'doctor'
+    'nurse', 'registered', 'verpleegkundige', 'arts', 'doctor',
+    'business', 'partner', 'growth', 'marketeer', 'success', 'solutions', 'cloud',
+    'devops', 'security', 'product', 'owner', 'scrum', 'master', 'talent', 'acquisition'
   ]);
   
   const tokens = clean.split(/\s+/).filter(t => t.length > 0);
@@ -197,9 +199,6 @@ export function extractNameFromFilename(filename: string): { firstName: string; 
 
 export function extractNameHeuristic(text: string, fileName?: string): { firstName: string; lastName: string } {
   const fromFilename = fileName ? extractNameFromFilename(fileName) : null;
-  if (fromFilename && fromFilename.firstName && fromFilename.lastName) {
-    return fromFilename;
-  }
 
   if (!text || text.trim().length === 0) {
     return fromFilename || { firstName: 'Candidate', lastName: '' };
@@ -214,6 +213,13 @@ export function extractNameHeuristic(text: string, fileName?: string): { firstNa
     'candidate profile', 'resume document', 'profile / resume', 'uploaded document',
     'john doe', 'jane doe', 'james miller', 'lorem ipsum'
   ];
+
+  if (fromFilename && fromFilename.firstName && fromFilename.lastName) {
+    const lowerText = text.toLowerCase();
+    if (genericPlaceholders.some(gp => lowerText.includes(gp))) {
+      return fromFilename;
+    }
+  }
 
   const ignoredKeywords = [
     'contact', 'werkervaring', 'work experience', 'experience', 'opleiding', 'education', 'skills',
