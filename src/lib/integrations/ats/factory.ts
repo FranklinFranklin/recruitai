@@ -15,6 +15,13 @@ export interface ATSIntegration {
     skills?: string[];
     resumeUrl?: string;
   }): Promise<{ success: boolean; externalId?: string; error?: string }>;
+  
+  getOpenJobs?(tenantId: string): Promise<Array<{
+    externalId: string;
+    title: string;
+    department?: string;
+    customRules?: string;
+  }>>;
 }
 
 class MockATSProvider implements ATSIntegration {
@@ -33,6 +40,27 @@ class MockATSProvider implements ATSIntegration {
     
     await new Promise(resolve => setTimeout(resolve, 1000));
     return { success: true, externalId: `EXT-${Date.now()}` };
+  }
+
+  async getOpenJobs(tenantId: string) {
+    console.log(`\n[ATS IMPORT: ${this.providerName}]`);
+    console.log(`Fetching jobs using token: ${this.token.substring(0, 5)}...`);
+    
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    // Mock response
+    return [
+      {
+        externalId: `ATS-JOB-101`,
+        title: `Enterprise Account Executive (${this.providerName})`,
+        department: 'Sales',
+        customRules: JSON.stringify({
+          mandatory_skills: ['B2B Sales', 'CRM'],
+          minimum_experience_years: 5,
+        })
+      }
+    ];
   }
 }
 
