@@ -4,7 +4,7 @@ import { requireTenantMember } from '@/lib/auth/utils';
 import { db, withTenant } from '@/lib/db';
 import { candidates } from '@/lib/db/schema';
 import { inngest } from './client';
-import { eq } from 'drizzle-orm';
+import { eq, desc, inArray, notInArray } from 'drizzle-orm';
 import { logAudit } from '@/lib/db/audit';
 
 import { extractPdfText, extractCandidateProfile } from '@/lib/ai/cv-extractor';
@@ -72,6 +72,9 @@ export async function uploadCandidateCV(formData: FormData) {
     console.warn("Inngest event dispatch skipped/offline:", inngestErr);
   }
 
+  // Enforce storage limits
+  await cleanupOldCandidates(activeTenantId);
+
   return { success: true, candidateId: newCandidate.id };
 }
 
@@ -98,6 +101,9 @@ export async function submitApproval(candidateId: string, approved: boolean, not
       notes,
     }
   });
+
+  // Enforce storage limits to quickly drop rejected CVs
+  await cleanupOldCandidates(activeTenantId);
 
   return { success: true };
 }
@@ -148,4 +154,36 @@ export async function updateCandidateData(candidateId: string, updates: {
 
   await logAudit(activeTenantId, user.id, 'CANDIDATE_DATA_EDITED', candidateId);
   return { success: true };
+}
+
+/**
+ * Enforces strict storage limits (max 20 CVs) and deletes rejected CVs
+ * to prevent the database from bloating with base64 encoded PDFs.
+ */
+async function cleanupOldCandidates(tenantId: string) {
+  try {
+    await withTenant(tenantId, async (tx) => {
+      // 1. Delete all REJECTED candidates immediately
+      await tx.delete(candidates).where(
+        eq(candidates.status, 'REJECTED')
+      );
+
+      // 2. Find how many are left
+      const existing = await tx.select({ id: candidates.id })
+        .from(candidates)
+        .orderBy(desc(candidates.createdAt)); // Newest first
+
+      // 3. If there are more than 20, delete the oldest ones
+      if (existing.length > 20) {
+        const idsToKeep = existing.slice(0, 20).map((c: any) => c.id);
+        
+        await tx.delete(candidates).where(
+          notInArray(candidates.id, idsToKeep)
+        );
+        console.log(`[Storage Cleanup] Deleted ${existing.length - 20} old CVs.`);
+      }
+    });
+  } catch (error) {
+    console.error("[Storage Cleanup Failed]", error);
+  }
 }

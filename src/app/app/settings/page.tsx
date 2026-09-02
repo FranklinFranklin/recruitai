@@ -4,6 +4,7 @@ import { tenantSettings, integrationAccounts } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { ShieldAlert, ArrowLeft, Webhook, RefreshCw, Briefcase } from 'lucide-react';
 import Link from 'next/link';
+import ConnectAtsButton from './ConnectAtsButton';
 
 export default async function AppSettingsPage() {
   const { user, activeTenantId, role } = await requireTenantMember();
@@ -117,9 +118,7 @@ export default async function AppSettingsPage() {
           ) : (
             <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 text-center">
               <p className="text-sm text-slate-500 mb-3">No ATS integrated.</p>
-              <button className="px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-md text-sm font-bold shadow-sm">
-                Connect ATS
-              </button>
+              <ConnectAtsButton />
             </div>
           )}
         </div>

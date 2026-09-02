@@ -21,16 +21,11 @@ export const authConfig = {
         async authorize(credentials) {
           if (!credentials?.email) return null;
           
-          if (credentials.email === 'admin@recruitai.local' && credentials.password === '1234') {
-            return { id: 'test-admin', name: 'Super Admin', email: 'admin@recruitai.local', globalRole: 'SYSTEM_ADMIN' };
-          }
-          if (credentials.email === 'recruiter@techstaffing.local' && credentials.password === '1234') {
-            return { id: 'test-recruiter', name: 'John Recruiter', email: 'recruiter@techstaffing.local', globalRole: 'USER' };
-          }
-          
           const [user] = await db.select().from(users).where(eq(users.email, credentials.email as string));
           
           if (user) {
+            // NOTE: This allows ANY user in the DB to login in dev mode without a password check.
+            // Suitable for local testing ONLY since it is guarded by NODE_ENV !== 'production'.
             return { id: user.id, name: user.name, email: user.email };
           }
           return null;
@@ -66,15 +61,6 @@ export const authConfig = {
   callbacks: {
     async signIn({ user, account, profile }) {
       console.log("[AUTH] Attempting login for:", user.email);
-      
-      if (process.env.NODE_ENV !== 'production') {
-        if (
-          user.email === 'admin@recruitai.local' || 
-          user.email === 'recruiter@techstaffing.local'
-        ) {
-          return true;
-        }
-      }
       
       if (user.email) {
         try {
