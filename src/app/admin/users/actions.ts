@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { users, memberships } from "@/lib/db/schema";
 import { requireSystemAdmin } from "@/lib/auth/utils";
 import { revalidatePath } from "next/cache";
+import { eq } from 'drizzle-orm';
 
 export async function createUserAction(formData: FormData) {
   // Pro security check: only actual admins can call this function
@@ -65,4 +66,20 @@ export async function createUserAction(formData: FormData) {
     }
     return { error: "Er is een databasefout opgetreden." };
   }
+}
+
+export async function updateUserRole(userId: string, newRole: string) {
+  // Only SYSTEM_ADMINs can change roles
+  await requireSystemAdmin({ requireWriteAccess: true });
+
+  if (!['USER', 'SYSTEM_ADMIN', 'SYSTEM_AUDITOR'].includes(newRole)) {
+    throw new Error('Invalid role specified');
+  }
+
+  await db.update(users)
+    .set({ globalRole: newRole })
+    .where(eq(users.id, userId));
+
+  revalidatePath('/admin/users');
+  return { success: true };
 }

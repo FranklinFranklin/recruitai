@@ -30,14 +30,19 @@ Built for enterprise security, performance, and compliance with Next.js, Drizzle
 - Isolated PDF viewer: displays the original PDF in an overlay using in-memory blob URLs, protecting against XSS and CSP issues.
 - Quick document actions: download with sanitized filenames or open in a new tab.
 
-### 5. Robust background processing & ATS sync (Inngest)
+### 5. Automated Vacancy Ingestion (Webhooks & ATS Sync)
+- Webhook endpoints: securely accept external job descriptions (`/api/webhooks/vacancies`) and automatically parse them into structured AI rules.
+- ATS Sync Cron Jobs: durable Inngest cron jobs (`syncAtsVacancies`) run hourly to pull open jobs from providers like Bullhorn, Recruitee, and OTYS.
+- Zero-Trust ATS Key Management: AES-256 encrypted storage for Tenant ATS API keys.
+
+### 6. Robust background processing & ATS export (Inngest)
 - Asynchronous processing: heavy PDF extraction and AI tasks run non-blocking in serverless Inngest workers.
 - Pausable workflows: workflows can wait for human approval (up to 7 days) before performing ATS exports.
-- ATS integration abstraction: modular layer for deterministic sync to systems like Bullhorn or Recruitee.
-- GDPR lifecycle: temporary files are cleaned up automatically after approval or rejection.
+- GDPR & Storage lifecycle: automated garbage collection enforces a rolling 20-CV retention limit per tenant and instantly drops `REJECTED` candidate files to prevent database bloat and ensure compliance.
 
-### 6. Enterprise security & multi-tenancy
+### 7. Enterprise security & multi-tenancy
 - Row Level Security (RLS): strict tenant isolation at the database level (`tenant_id`).
+- Real-time DDoS protection: edge-level in-memory sliding-window rate limiting (`proxy.ts`) to prevent malicious webhook spam from draining OpenAI API credits.
 - Enterprise SSO: sign-in via Google and Microsoft Entra ID (Azure AD).
 - Audit logging & security events: auditable logs for every upload, edit and status change.
 
@@ -141,10 +146,12 @@ npm run test:e2e
 src/
 ├── app/
 │   ├── (auth)/             # login & auth flows
+│   ├── api/webhooks/       # automated inbound CV & Vacancy ingestion endpoints
 │   ├── admin/              # system admin, tenants, users & health
 │   └── app/                # recruiter dashboard
 │       ├── approvals/      # human-in-the-loop approvals & inline PDF viewer
 │       ├── candidates/     # candidate list & archive
+│       ├── settings/       # tenant admin ATS integrations & webhook URLs
 │       └── upload/         # drag & drop CV intake
 ├── lib/
 │   ├── ai/
@@ -154,9 +161,10 @@ src/
 │   ├── db/
 │   │   ├── index.ts        # database client & tenant RLS helper
 │   │   └── schema.ts       # Drizzle schema
+│   ├── integrations/ats/   # AES-256 encrypted multi-provider ATS sync layer
 │   └── workflows/
-│       ├── actions.ts      # server actions (upload, approve, edit)
-│       └── functions/      # Inngest durable workflow definitions
+│       ├── actions.ts      # server actions (upload, approve, edit, GC cleanup)
+│       └── functions/      # Inngest durable workflows & hourly sync crons
 tests/
 ├── unit/                   # Vitest unit tests (CV parser, policy engine)
 └── e2e/                    # Playwright end-to-end tests

@@ -4,6 +4,7 @@ import { users, tenants } from '@/lib/db/schema';
 import { count } from 'drizzle-orm';
 import Link from 'next/link';
 import AddUserModal from './AddUserModal';
+import EditUserModal from './EditUserModal';
 
 export default async function UsersPage({
   searchParams,
@@ -64,7 +65,9 @@ export default async function UsersPage({
                     </span>
                   </td>
                   <td className="p-4">{user.createdAt.toISOString().split('T')[0]}</td>
-                  <td className="p-4 text-blue-600 hover:underline cursor-pointer">Edit</td>
+                  <td className="p-4">
+                    <EditUserModal user={user} />
+                  </td>
                 </tr>
               ))
             )}
