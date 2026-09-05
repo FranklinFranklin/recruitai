@@ -14,4 +14,4 @@
 - SENSITIVE_PERSONAL_DATA
 
 ## Reporting a Vulnerability
-Please do not open a public issue. Email security@example.com instead.
+Please do not open a public issue. Email info@techuis.nl instead.
