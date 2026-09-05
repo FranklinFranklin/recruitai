@@ -22,7 +22,7 @@ graph TD
     subgraph Phase 2: AI Intake
         C[Recruiter uploads CV PDF]:::human --> D[AI extracts Profile Data]:::ai
         B -.-> E
-        D --> E{AI Match Brain: Compares Profile to Job}:::ai
+        D --> E{AI Brain}:::ai
         E -->|Calculates Score & Reasoning| F[Candidate set to 'Pending']:::system
     end
 
