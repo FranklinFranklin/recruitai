@@ -6,6 +6,43 @@ Built for enterprise security, performance, and compliance with Next.js, Drizzle
 
 ---
 
+## System Workflow
+
+```mermaid
+graph TD
+    %% Styling
+    classDef ai fill:#f3e8ff,stroke:#9333ea,stroke-width:2px,color:#000
+    classDef human fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#000
+    classDef system fill:#f1f5f9,stroke:#64748b,stroke-width:2px,color:#000
+
+    subgraph Phase 1: Setup & Sync
+        A[Manager connects ATS]:::human --> B[Cron Job Syncs Open Vacancies]:::system
+    end
+
+    subgraph Phase 2: AI Intake
+        C[Recruiter uploads CV PDF]:::human --> D[AI extracts Profile Data]:::ai
+        B -.-> E
+        D --> E{AI Match Brain: Compares Profile to Job}:::ai
+        E -->|Calculates Score & Reasoning| F[Candidate set to 'Pending']:::system
+    end
+
+    subgraph Phase 3: Human-in-the-Loop
+        F --> G[Recruiter reviews Match & PDF]:::human
+        G -->|Edit| H[Recruiter fixes AI mistakes]:::human
+        H --> G
+        G -->|Reject| I[Status: Rejected]:::system
+        G -->|Approve| J[Status: Approved]:::system
+    end
+
+    subgraph Phase 4: ATS Export & Compliance
+        J --> K[Worker securely pushes Candidate Data back into ATS]:::system
+        I --> L[Garbage Collection: Delete Rejected & Old CVs]:::system
+        K --> L
+    end
+```
+
+---
+
 ## Key features
 
 ### 1. Intelligent CV intake & parsing
